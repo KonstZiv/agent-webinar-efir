@@ -1,0 +1,22 @@
+# секрети
+.env
+.env.*
+!.env.example
+
+# локальні налаштування агента і файли передачі між сесіями
+.claude/settings.local.json
+.handoff/
+
+# віртуальне середовище і кеші Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# редактори і система
+.idea/
+.vscode/
+.DS_Store

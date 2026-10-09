@@ -1,0 +1,22 @@
+# Local PostgreSQL for development and tests (the app itself runs with `uv run`).
+# Trust authentication is bound to 127.0.0.1 only, so no password lives in the repository.
+# Host port 55433 avoids clashing with other local PostgreSQL servers (5432, 55432).
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_DB: app
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "127.0.0.1:55433:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  db-data:

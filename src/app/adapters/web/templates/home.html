@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block main %}
+<section class="service">
+  <h1>{{ title }}</h1>
+  {% if commit_short %}<p>Коміт <code>{{ commit_short }}</code></p>{% endif %}
+</section>
+{% endblock %}

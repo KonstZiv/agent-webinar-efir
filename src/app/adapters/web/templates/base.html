@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %}</title>
+  {% if noindex or not indexing_enabled %}<meta name="robots" content="noindex">{% endif %}
+  {% block meta %}{% endblock %}
+  <link rel="stylesheet" href="/static/css/site.css{% if asset_version %}?v={{ asset_version }}{% endif %}">
+  <script src="/static/js/consent.js{% if asset_version %}?v={{ asset_version }}{% endif %}" defer></script>
+  {% block scripts %}{% endblock %}
+</head>
+<body data-ga4-id="{{ ga4_id }}">
+  <main class="page">
+    {% block main %}{% endblock %}
+  </main>
+  {% include "partials/footer.html" %}
+  {% include "partials/cookie_banner.html" %}
+</body>
+</html>

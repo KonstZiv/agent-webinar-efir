@@ -1,0 +1,21 @@
+# .github/workflows/ci.yml — гейти на кожен push і pull request
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Встановити залежності
+        run: uv sync --dev
+      - name: Лінтер
+        run: uv run ruff check .
+      - name: Типи
+        run: uv run mypy src
+      - name: Тести
+        run: uv run pytest

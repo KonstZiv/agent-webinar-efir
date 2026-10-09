@@ -1,0 +1,23 @@
+# Фрагмент pyproject.toml — секції гейтів якості (додаються до наявного файла проєкту)
+
+[tool.ruff]
+# Версію ruff фіксує uv у залежностях; набір правил за замовчуванням
+# змінюється між версіями — тому вибір фіксується явно.
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]  # базовий розумний набір курсу
+
+[tool.mypy]
+python_version = "3.14"
+strict = false            # старт курсу; суворість підвищується поступово
+warn_unused_ignores = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.report]
+fail_under = 75           # поріг pro-рівня; санітарний мінімум, не самоціль

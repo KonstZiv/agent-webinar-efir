@@ -1,0 +1,22 @@
+# .pre-commit-config.yaml — локальні гейти перед кожним комітом
+# Встановлення: uv run pre-commit install
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+      - id: detect-private-key
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff (лінтер)
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+      - id: mypy
+        name: mypy (типи)
+        entry: uv run mypy src
+        language: system
+        pass_filenames: false
