@@ -26,6 +26,7 @@
 - **Alembic** без таблиць: `env.py`, шаблон ревізії, порожня тека `versions/`.
 - **Гейти:** pytest, ruff, mypy, pre-commit, GitHub Actions зі службовим PostgreSQL.
 - **Правила для агента:** `CLAUDE.md`, `.claude/settings.json`. Шаблони постановки, специфікації й рецензії — `docs/templates/`; гейти курсу — `docs/gates/`.
+- **Контракт** (`docs/contract.md`, `docs/legacy-schema.md`, `tests/test_contract.py`) — контракт конкретного проєкту, наведений як приклад; новий проєкт пише свій.
 
 ## Як запустити локально
 
@@ -65,8 +66,9 @@ curl -sI "http://127.0.0.1:8000/?utm_source=test&gclid=test"
 1. Створіть репозиторій із цього шаблону (кнопка «Use this template» на GitHub) і склонуйте його.
 2. Напишіть `docs/requirements.md` (що будуємо) і `spec.md` за `docs/templates/spec-template.md` (як саме і в яких межах). На них спирається `CLAUDE.md`.
 3. Замініть зразки в `docs/legal/` справжніми текстами; назву і опис — у `pyproject.toml`.
-4. Додавайте можливості задачами за `docs/templates/task-template.md`: план → тести → код → гейти → рецензія.
-5. Таблиці бази — першою ревізією: `uv run --env-file .env alembic revision -m "…"` (моделі — у `adapters/db/models.py`).
+4. Видаліть або перепишіть разом `docs/contract.md`, `docs/legacy-schema.md` і `tests/test_contract.py`: це контракт конкретного проєкту.
+5. Додавайте можливості задачами за `docs/templates/task-template.md`: план → тести → код → гейти → рецензія.
+6. Таблиці бази — першою ревізією: `uv run --env-file .env alembic revision -m "…"` (моделі — у `adapters/db/models.py`).
 
 ## Розгортання на Railway
 
