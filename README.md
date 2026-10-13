@@ -25,6 +25,7 @@
   - маскування email у журналах.
 - **Alembic** без таблиць: `env.py`, шаблон ревізії, порожня тека `versions/`.
 - **Гейти:** pytest, ruff, mypy, pre-commit, GitHub Actions зі службовим PostgreSQL.
+- **Хмарний агент:** `.github/workflows/claude.yml` — `@claude` в Issue і коментарях від людей із правом запису; `claude-code-review.yml` — рев'ю кожного PR. Потрібні Claude GitHub App і секрет `CLAUDE_CODE_OAUTH_TOKEN`.
 - **Правила для агента:** `CLAUDE.md`, `.claude/settings.json`. Шаблони постановки, специфікації й рецензії — `docs/templates/`; гейти курсу — `docs/gates/`.
 - **Контракт** (`docs/contract.md`, `docs/legacy-schema.md`, `tests/test_contract.py`) — контракт конкретного проєкту, наведений як приклад; новий проєкт пише свій.
 
