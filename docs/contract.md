@@ -20,7 +20,7 @@
 
 ## Адреси
 
-- `https://agent.pythoncourse.me` — зараз шаблон у режимі переадресації (307) на v1; з етапу 10 ефіру 20.10 — v2.
+- `https://agent.pythoncourse.me` — зараз шаблон у режимі переадресації (307) на v1; з етапу 10 ефіру 21.10 — v2.
 - `https://agent-preparation.pythoncourse.me` — v1; після ефіру домен переходить на сервіс v2.
 - Порядок імпорту і перемикання адрес — `docs/legacy-schema.md`, «Порядок імпорту і перемикання адрес».
 - Посилання в листах v1 (трансляція, календар, відписка, політика) побудовано від `PUBLIC_BASE_URL`; у текстах листів це `https://agent.pythoncourse.me/…`. Заголовок `List-Unsubscribe` побудовано від `SERVICE_BASE_URL`, власної адреси v1 (v1: `src/webinar/adapters/mail/confirmation.py`, `JinjaConfirmationComposer`; `docs/copy.md`, розділи 3 і 6). Тому після переходу домену спільні шляхи розділу 3 на обох адресах обслуговує v2.
@@ -121,7 +121,7 @@
 
 - Адреса клієнта, ключ обмеження частоти, — із заголовка `X-Real-IP`: проксі Railway ставить його сам. Береться останнє значення, якщо це коректна IP-адреса, інакше — адреса з'єднання. `X-Forwarded-For` не використовується: з `--forwarded-allow-ips '*'` uvicorn бере його крайній лівий запис, який задає клієнт. Код — `client_ip`, логіка однакова (v1: `src/webinar/adapters/web/client_ip.py`; шаблон: `src/app/adapters/web/client_ip.py`).
 - Ідентифікатор події календаря — `UID` `webinar-2026-10-20@pythoncourse.me`, сталий і без «v1» (v1: `src/webinar/adapters/web/ics.py`, `EVENT_UID`). `/calendar.ics` v2 віддає подію з тим самим `UID`: календар, куди подію вже додали, оновить її, а не створить другу.
-- `UID` сталий. `SEQUENCE` ≥ 0 (у v1 не задано, тобто 0) і збільшується, коли змінюється час або опис події. `DTSTAMP` — час створення файла (v1: `src/webinar/adapters/web/ics.py`, `build_calendar`, `dtstamp` — поточний час).
+- `UID` сталий. `SEQUENCE` збільшується, коли змінюється час або опис події: після перенесення ефіру на 21.10 v1 віддає `SEQUENCE:1` з початком 21.10, тож v2 віддає `SEQUENCE` не менший за 1. `DTSTAMP` — час створення файла (v1: `src/webinar/adapters/web/ics.py`, `build_calendar`, `dtstamp` — поточний час).
 
 ## 7. Переадресація
 
