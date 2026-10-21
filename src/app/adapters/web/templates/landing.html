@@ -1,0 +1,117 @@
+{#- The landing of / in the layout the viewers chose (design/live, «М'яке світло»).
+    Texts come ready (CLAUDE.md, «Маршрут / і landing.html»): ``hero`` from the route, ``blocks``
+    from the foundation; the page has no mode or date logic. The partials of slices are included
+    by name and bring their own scripts and styles; icons are masks from static/img. -#}
+{% extends "base.html" %}
+{% block main %}
+<div class="landing">
+  <section class="landing-hero" aria-labelledby="landing-hero-title">
+    <div class="landing-hero__card">
+      <p class="landing-hero__eyebrow"><span class="landing-hero__dot" aria-hidden="true"></span><span>{{ hero.eyebrow }}</span></p>
+      <h1 class="landing-hero__title" id="landing-hero-title">{{ hero.title }}</h1>
+      <p class="landing-hero__subtitle">{{ hero.subtitle }}</p>
+      <div class="landing-hero__facts">
+        <p class="landing-fact landing-fact--when"><span class="landing-icon landing-icon--calendar" aria-hidden="true"></span><span>{{ hero.when }}</span></p>
+        <p class="landing-fact"><span class="landing-icon landing-icon--person" aria-hidden="true"></span><span>{{ hero.host }}</span></p>
+      </div>
+      <div class="landing-hero__actions">
+        <a class="landing-button" href="#register">{{ hero.button }}</a>
+        <p class="landing-hero__note">{{ hero.note }}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="landing-section" aria-labelledby="landing-on-air">
+    <div class="landing-section__head">
+      <h2 class="landing-section__title" id="landing-on-air">{{ blocks.on_air.title }}</h2>
+      <p class="landing-section__lead">{{ blocks.on_air.intro }}</p>
+    </div>
+    <ol class="landing-steps" role="list">
+      {% for item in blocks.on_air.items %}
+      <li class="landing-steps__item"><p class="landing-steps__text">{{ item }}</p></li>
+      {% endfor %}
+    </ol>
+    {% if blocks.on_air.likes_goal %}<p class="landing-goal">{{ blocks.on_air.likes_goal }}</p>{% endif %}
+  </section>
+
+  <div class="landing-slot">{% include "_counters.html" ignore missing %}</div>
+
+  <section class="landing-section" aria-labelledby="landing-audience">
+    <div class="landing-section__head">
+      <h2 class="landing-section__title" id="landing-audience">{{ blocks.audience.title }}</h2>
+    </div>
+    <ul class="landing-points" role="list">
+      {% for item in blocks.audience.items %}
+      <li class="landing-points__item"><span>{{ item }}</span></li>
+      {% endfor %}
+    </ul>
+    <div class="landing-card">
+      <h3 class="landing-card__title">{{ blocks.audience.subtitle }}</h3>
+      <p class="landing-card__text">{{ blocks.audience.text }}</p>
+      <p class="landing-card__note">{{ blocks.audience.note }}</p>
+    </div>
+  </section>
+
+  <section class="landing-section" aria-labelledby="landing-benefits">
+    <div class="landing-section__head">
+      <h2 class="landing-section__title" id="landing-benefits">{{ blocks.benefits.title }}</h2>
+    </div>
+    <ol class="landing-steps landing-steps--plain" role="list">
+      {% for item in blocks.benefits.items %}
+      <li class="landing-steps__item"><p class="landing-steps__text">{{ item }}</p></li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="landing-section" aria-labelledby="landing-channel">
+    <div class="landing-callout">
+      <h2 class="landing-section__title" id="landing-channel">{{ blocks.channel.title }}</h2>
+      <p class="landing-callout__text">{{ blocks.channel.text }}</p>
+      <p class="landing-callout__link">{{ blocks.channel.link }}</p>
+    </div>
+  </section>
+
+  <section class="landing-section" aria-labelledby="landing-presenter">
+    <div class="landing-section__head">
+      <h2 class="landing-section__title" id="landing-presenter">{{ blocks.presenter.title }}</h2>
+    </div>
+    <div class="landing-person">
+      <span class="landing-person__avatar" aria-hidden="true"><span class="landing-icon landing-icon--person"></span></span>
+      <div class="landing-person__body">
+        <p class="landing-person__name">{{ blocks.presenter.name }}</p>
+        <p class="landing-person__text">{{ blocks.presenter.text }}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="landing-section" aria-labelledby="landing-course">
+    <div class="landing-section__head">
+      <h2 class="landing-section__title" id="landing-course">{{ blocks.course.title }}</h2>
+      <p class="landing-section__lead">{{ blocks.course.intro }}</p>
+    </div>
+    <div class="landing-course">
+      {% for section in blocks.course.sections %}
+      {% if section.always_visible %}
+      <div class="landing-course__card">
+        <h3 class="landing-course__title">{{ section.title }}</h3>
+        <div class="landing-prose">{{ section.html }}</div>
+      </div>
+      {% else %}
+      <details class="landing-course__item">
+        <summary class="landing-course__summary">{{ section.title }}</summary>
+        <div class="landing-prose">{{ section.html }}</div>
+        {% for block in section.blocks %}
+        <details class="landing-course__block">
+          <summary class="landing-course__summary">{{ block.title }}</summary>
+          <div class="landing-prose">{{ block.html }}</div>
+        </details>
+        {% endfor %}
+      </details>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+
+  <div class="landing-slot landing-slot--form">{% include "_form.html" ignore missing %}</div>
+</div>
+{% endblock %}
