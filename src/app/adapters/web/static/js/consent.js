@@ -5,6 +5,8 @@
 // analytics at once. A stored choice (localStorage) always wins over the region. Without a
 // measurement id (GA4_MEASUREMENT_ID) there is no analytics, so the banner does not show up
 // by itself; the «cookie settings» link still opens it.
+// The success screen of the registration sends generate_lead once per browser, and the form
+// gets the GA client id; both only while analytics is active (slice «реєстрація і лист»).
 // The pure functions are exported for `node --test` (tests/js/consent.test.cjs).
 (function (root, factory) {
   "use strict";
@@ -18,6 +20,13 @@
   "use strict";
 
   const STORAGE_KEY = "cookie_consent";
+  // Shared with v1 on every *.pythoncourse.me site: one lead per browser, for a year
+  // (docs/contract.md, section 5).
+  const LEAD_COOKIE_NAME = "webinar_lead";
+  const LEAD_COOKIE =
+    "webinar_lead=1; Domain=.pythoncourse.me; Path=/; Max-Age=31536000; Secure; SameSite=Lax";
+  const LEAD_MARKER = "[data-lead]";
+  const CLIENT_ID_INPUT = 'input[name="ga_client_id"]';
   const CHOICES = ["granted", "denied"];
   const GTAG_URL = "https://www.googletagmanager.com/gtag/js?id=";
   // Cookies of Google Analytics (_ga, _ga_<id>) and Google Ads conversion linking (_gcl_*).
@@ -218,6 +227,19 @@
     }
 
     return {
+      // gtag is loaded and the visitor has not rejected analytics in this view.
+      isActive() {
+        return loaded && !denied && Boolean(measurementId);
+      },
+      // `onSent` runs once gtag.js has sent the event; never when gtag.js is blocked.
+      event(name, onSent) {
+        if (!this.isActive()) return;
+        if (onSent) gtag("event", name, { event_callback: onSent });
+        else gtag("event", name);
+      },
+      clientId(callback) {
+        if (this.isActive()) gtag("get", measurementId, "client_id", callback);
+      },
       load() {
         if (!measurementId) return;
         if (loaded) {
@@ -247,6 +269,65 @@
         removeTrackingCookies(win, doc);
       },
     };
+  }
+
+  function hasLeadCookie(cookieString) {
+    return (cookieString || "")
+      .split(";")
+      .some((part) => part.trim().split("=")[0] === LEAD_COOKIE_NAME);
+  }
+
+  // generate_lead from the success screen: only with active analytics and only once per
+  // browser. A plain page view has no success screen, so it never sends the event. The
+  // browser is marked only after gtag.js has sent the event: with gtag.js blocked the next
+  // registration (here or on v1) can still report the lead.
+  function reportLead({ doc, analytics }) {
+    const marker = doc.querySelector(LEAD_MARKER);
+    if (!marker || marker.dataset.leadReported || !analytics.isActive()) return false;
+    let cookies;
+    try {
+      cookies = doc.cookie;
+    } catch {
+      return false;
+    }
+    if (hasLeadCookie(cookies)) return false;
+    marker.dataset.leadReported = "1"; // one event per success screen
+    let marked = false;
+    analytics.event("generate_lead", () => {
+      if (marked) return;
+      marked = true;
+      doc.cookie = LEAD_COOKIE;
+    });
+    return true;
+  }
+
+  function setClientId(doc, value) {
+    for (const input of doc.querySelectorAll(CLIENT_ID_INPUT)) input.value = value;
+  }
+
+  // The hidden form field carries the GA client id only while analytics is active.
+  function syncClientId({ doc, analytics }) {
+    if (!analytics.isActive()) {
+      setClientId(doc, "");
+      return;
+    }
+    analytics.clientId((clientId) => {
+      // gtag may answer after the visitor has rejected analytics.
+      setClientId(doc, analytics.isActive() ? clientId || "" : "");
+    });
+  }
+
+  // «Дозволити»: analytics starts, and a success screen already on the page reports the lead.
+  function grant({ doc, analytics }) {
+    analytics.load();
+    syncClientId({ doc, analytics });
+    reportLead({ doc, analytics });
+  }
+
+  // «Відхилити»: analytics stops and the form no longer carries the client id.
+  function reject({ doc, analytics }) {
+    analytics.deny();
+    syncClientId({ doc, analytics });
   }
 
   function start(win) {
@@ -286,6 +367,14 @@
       if (decision.showBanner) setBannerHidden(false);
       win.addEventListener("resize", () => reserveSpace(doc.body, banner));
 
+      // The success screen arrives with the page (form sent without JavaScript) or by htmx.
+      reportLead({ doc, analytics });
+      syncClientId({ doc, analytics });
+      doc.addEventListener("htmx:afterSettle", () => {
+        reportLead({ doc, analytics });
+        syncClientId({ doc, analytics });
+      });
+
       if (banner) {
         banner.addEventListener("click", (event) => {
           const button = event.target.closest("[data-consent]");
@@ -293,8 +382,8 @@
           const choice = button.dataset.consent;
           saveChoice(storage, choice);
           setBannerHidden(true);
-          if (choice === "granted") analytics.load();
-          else analytics.deny();
+          if (choice === "granted") grant({ doc, analytics });
+          else reject({ doc, analytics });
         });
       }
       for (const link of doc.querySelectorAll("[data-cookie-settings]")) {
@@ -318,6 +407,11 @@
     saveChoice,
     createAnalytics,
     reserveSpace,
+    hasLeadCookie,
+    reportLead,
+    syncClientId,
+    grant,
+    reject,
     start,
   };
 });

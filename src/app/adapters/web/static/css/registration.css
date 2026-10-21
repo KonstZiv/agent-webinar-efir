@@ -1,0 +1,190 @@
+/* The slice «реєстрація і лист»: the form, the success screen and the service pages
+   (unsubscribing, «the link will appear»). Mobile first at 375 px; the colours come from
+   the tokens of site.css, the error colour is this file's own. */
+
+:root {
+  --danger: #b3261e; /* errors: 6.5:1 on white */
+}
+
+/* The form and the success screen take the place of each other in section#register */
+
+.register {
+  margin-top: 24px;
+  padding: 28px var(--side) 32px;
+  border-top: 1px solid var(--line);
+}
+
+.register__title,
+.success__title {
+  margin: 0;
+  font: 800 24px/1.2 var(--font);
+}
+
+.register__intro {
+  margin: 12px 0 0;
+  color: var(--ink-2);
+}
+
+.register__form {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field__label {
+  font-weight: 600;
+}
+
+.field__input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 2px solid var(--line-2);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.4 var(--font);
+}
+
+.field__input:focus-visible {
+  border-color: var(--accent);
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.field__input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.field__hint {
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.field__error,
+.form-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.form-error[hidden] {
+  display: none;
+}
+
+.consent {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.consent__box {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
+.captcha {
+  min-height: 65px; /* the Turnstile widget, so the button does not jump */
+}
+
+.cf-turnstile {
+  max-width: 100%; /* the widget is 300 px wide: it fits a 375 px screen */
+}
+
+.btn {
+  display: inline-block;
+  min-height: 48px;
+  padding: 12px 22px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--bg);
+  font: 700 16px/1.5 var(--font);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* The success screen and the notice of the staging site */
+
+.success p,
+.notice p {
+  margin: 12px 0 0;
+}
+
+.success__hint {
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.player {
+  margin-top: 16px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--ink);
+}
+
+.player__frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+}
+
+.bot {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  color: var(--ink);
+}
+
+.bot__title {
+  margin: 0;
+  font: 700 19px/1.3 var(--font);
+}
+
+.bot .btn {
+  margin-top: 16px;
+}
+
+/* Service pages: unsubscribing, «the link will appear» */
+
+.service-page {
+  padding: 40px var(--side) 8px;
+}
+
+.service-page h1 {
+  margin: 0;
+  font: 800 26px/1.15 var(--font);
+}
+
+.service-page p {
+  margin: 12px 0 0;
+  color: var(--ink-2);
+}
+
+.unsubscribe-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  align-items: center;
+  margin-top: 24px;
+}

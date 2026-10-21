@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{#
+  Unsubscribe pages of the slice «реєстрація і лист». Texts are verbatim from docs/copy.md: 7.1
+  (state «confirm»), 7.2 («done»), 7.3 («failed»); title — section 10, «Службові сторінки».
+  tests/registration/test_unsubscribe.py compares them.
+#}
+{% block title %}Відписка від листів{% endblock %}
+{% block main %}
+<section class="service-page">
+{% if state == "confirm" %}
+  <h1>Відписатися і видалити дані?</h1>
+  <p>Ви відписуєтеся від усіх листів для адреси <strong>{{ email }}</strong>. Відписка відкликає вашу згоду: ми видалимо всі дані, які отримали від вас, зокрема прив'язку Telegram, і більше вам не писатимемо. Запрошення на перше заняття курсу ви теж не отримаєте.</p>
+  <p>Скасувати відписку не можна; за бажання ви зможете зареєструватися знову.</p>
+  <form class="unsubscribe-form" method="post" action="{{ action }}">
+    <button class="btn" type="submit">Відписатися</button>
+    <a href="/">Залишитися</a>
+  </form>
+{% elif state == "done" %}
+  <h1>Ви відписалися</h1>
+  <p>Ми видалили ваші дані й більше не надсилатимемо вам листів.</p>
+  <p>Якщо вашу адресу вже передано навчальному центру CBS, видалити її там може лише сам навчальний центр: напишіть на <a href="mailto:edu@cbsystematics.com">edu@cbsystematics.com</a>. Докладніше — в розділі 6 <a href="/privacy">політики приватності</a>.</p>
+  <p><a href="/">На головну</a></p>
+{% else %}
+  <h1>Не вдалося відписатися</h1>
+  <p>Посилання для відписки не спрацювало. Напишіть на <a href="mailto:privacy@pythoncourse.me">privacy@pythoncourse.me</a> з адреси, яку ви вказали під час реєстрації.</p>
+{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,35 @@
+{#-
+  The success screen of the slice «реєстрація і лист» in place of the form (docs/requirements.md,
+  sections 3, 5, 7 and 12). Its content by mode comes from _success_live.html or
+  _success_replay.html; the bot's block, the marker of generate_lead (data-lead) and the places
+  of the features Ф1 (_referral.html) and Ф3 (_quiz.html), skipped while absent. An address off
+  the allowlist of the staging site gets the notice instead. Texts: docs/copy.md, section 2.
+-#}
+<section class="register" id="register">
+{%- if registration_state.not_allowed %}
+  <div class="notice">
+    <h2 class="success__title" tabindex="-1" data-focus>Це тестова версія сайту</h2>
+    <p>Тут реєструються лише адреси для перевірки. Зареєструватися на вебінар можна на основному сайті.</p>
+    <p><a href="https://agent.pythoncourse.me/?utm_source=staging&amp;utm_medium=referral&amp;utm_content=notice">Перейти на основний сайт</a></p>
+  </div>
+{%- else %}
+  <div class="success" data-lead>
+    {%- if site_mode == "replay" %}
+    {% include "_success_replay.html" %}
+    {%- else %}
+    {% include "_success_live.html" %}
+    {%- endif %}
+    <div class="bot">
+    {%- if registration_state.bot_url %}
+      <h3 class="bot__title">Інструкція «Зроби сам»</h3>
+      <p>Покроковий опис, як зібрати такий сайт самостійно з кодинг-агентом. Видає Telegram-бот — підпишіться на канал «Agentic Engineers» і натисніть кнопку.</p>
+      <a class="btn" href="{{ registration_state.bot_url }}">Отримати в Telegram</a>
+    {%- else %}
+      <p>Інструкцію «Зроби сам» видає Telegram-бот підписникам каналу <a href="https://t.me/agentic_engineers">«Agentic Engineers»</a>; посилання на бота з'явиться тут найближчим часом.</p>
+    {%- endif %}
+    </div>
+    {% include "_referral.html" ignore missing %}
+    {% include "_quiz.html" ignore missing %}
+  </div>
+{%- endif %}
+</section>

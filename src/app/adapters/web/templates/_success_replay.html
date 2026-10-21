@@ -1,0 +1,11 @@
+{#-
+  The success screen in the mode «replay»: docs/copy.md, section 2, group «replay». The
+  recording plays from YouTube's privacy-enhanced domain (RECORDING_YOUTUBE_ID); only those who
+  registered see it.
+-#}
+<h2 class="success__title" tabindex="-1" data-focus>Ви зареєстровані — ось запис ефіру</h2>
+<div class="player">
+  <iframe class="player__frame" src="https://www.youtube-nocookie.com/embed/{{ registration.recording_youtube_id | urlencode }}" title="Архітектор замість кодера: як працює агентна розробка на Python" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
+<p>Запрошення на перше заняття курсу надіслано на <strong>{{ registration_state.email }}</strong>: понеділок, 26.10.2026, 19:00 за Києвом; Microsoft Teams.</p>
+<p class="success__hint">Не бачите листа? Перевірте теки «Спам» і «Промоакції».</p>

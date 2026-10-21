@@ -69,10 +69,10 @@
 | `/` | GET | так — `home.py`, службова сторінка | `landing.py` — лендінг | головна сторінка |
 | `/privacy` | GET | так — `privacy.py` | `privacy.py` | політика приватності з `docs/legal/privacy.md` |
 | `/healthz` | GET | так — `health.py`, відповідає ще й на HEAD | `health.py` | 200 `{"status": "ok"}`, коли база відповідає, інакше 503 `{"status": "unavailable"}`; перевірка працездатності Railway |
-| `/go/stream` | GET | ні — додає v2 | `stream.py` | 302 на трансляцію; поки адреси трансляції немає — сторінка «посилання з'явиться»; посилання — у листах і події календаря |
-| `/calendar.ics` | GET | ні — додає v2 | `calendar.py` | файл події (розділ 6); посилання — у листі |
-| `/register` | GET | ні — додає v2 | `register.py` — 303 на `/#register` | адресу форми відкрили як сторінку (після оновлення чи без JavaScript) — переадресація на форму |
-| `/unsubscribe/{token}` | GET, POST | ні — додає v2 | `unsubscribe.py` | GET — сторінка підтвердження, нічого не змінює; POST — відписка з форми й одним кліком |
+| `/go/stream` | GET | так — `registration_links.py` | `stream.py` | 302 на трансляцію; поки адреси трансляції немає — сторінка «посилання з'явиться»; посилання — у листах і події календаря |
+| `/calendar.ics` | GET | так — `registration_links.py` | `calendar.py` | файл події (розділ 6); посилання — у листі |
+| `/register` | GET | так — `registration.py` | `register.py` — 303 на `/#register` | адресу форми відкрили як сторінку (після оновлення чи без JavaScript) — переадресація на форму |
+| `/unsubscribe/{token}` | GET, POST | так — `registration_unsubscribe.py` | `unsubscribe.py` | GET — сторінка підтвердження, нічого не змінює; POST — відписка з форми й одним кліком |
 
 `GET /register` v2 обслуговує так само, як v1: 303 на `/#register` (рішення кроку 05). `POST /register` до спільних шляхів не входить: форма кожної версії надсилає дані своєму сервісу. Маршрути лише v2 — `/go/lesson`, `/go/course`, `/calendar/lesson.ics`, `/m/{slug}`, `/telegram/webhook`, `/counters`, маршрути адміністратора (розділ 8) — описує `docs/requirements.md`, розділ 4.
 
@@ -112,7 +112,7 @@
 ## 5. Cookie `webinar_lead`
 
 - рядок cookie: `webinar_lead=1; Domain=.pythoncourse.me; Path=/; Max-Age=31536000; Secure; SameSite=Lax`
-- у шаблоні: ні — повертає зріз «реєстрація і лист» v2 (розділ 10); він же змінює цю позначку на «так»
+- у шаблоні: так — повертає зріз «реєстрація і лист» v2 (розділ 10); він же змінює цю позначку на «так»
 
 Поки в шаблоні cookie немає, `consent.js` не містить `webinar_lead`. Коли вона з'явиться, позначка стає «так», і рядок cookie в `consent.js` має побайтово збігатися з рядком вище. На етапі `запуск` цей рядок має бути в `consent.js` за будь-якої позначки. Усі три правила перевіряє `tests/test_contract.py`.
 

@@ -1,0 +1,67 @@
+{#-
+  The registration form of the slice «реєстрація і лист» (docs/requirements.md, sections 5 and
+  12): section#register, which POST /register replaces with the form and its problems or with
+  _success.html. Self-contained: it brings the Turnstile widget and script and its own script,
+  which renders the widget (render=explicit, whichever script loads first); the page includes it
+  by name. Texts are verbatim from docs/copy.md 1.8 by mode; the consent from
+  docs/legal/consent.md. Renders nothing where the slice is not installed.
+-#}
+{%- if registration is defined -%}
+{%- set state = registration_state | default(none) -%}
+{%- if state and state.screen -%}
+{% include "_success.html" %}
+{%- else -%}
+{%- set problems = state.problems if state else [] -%}
+{%- set email_error = "email_empty" in problems or "email_invalid" in problems or "email_domain" in problems -%}
+{%- set consent_error = "consent_missing" in problems %}
+<section class="register" id="register">
+  {%- if site_mode == "replay" %}
+  <h2 class="register__title">Зареєструватися і дивитися запис</h2>
+  <p class="register__intro">Після реєстрації відкриється запис ефіру. Ви також отримаєте запрошення на перше заняття курсу — понеділок, 26.10.2026, 19:00 за Києвом. Потрібна лише адреса електронної пошти.</p>
+  {%- else %}
+  <h2 class="register__title">Зареєструватися</h2>
+  <p class="register__intro">Запрошення на перше заняття курсу — одразу на пошту. Потрібна лише адреса електронної пошти.</p>
+  {%- endif %}
+  <form class="register__form" method="post" action="/register#register" novalidate
+        hx-post="/register" hx-target="#register" hx-swap="outerHTML">
+    <label class="field">
+      <span class="field__label">Електронна пошта</span>
+      <input class="field__input" type="email" name="email" value="{{ state.email if state else '' }}" placeholder="name@example.com" autocomplete="email" inputmode="email" maxlength="254"
+             {%- if email_error %} aria-invalid="true" aria-describedby="email-error email-hint"{% else %} aria-describedby="email-hint"{% endif %}>
+      <span class="field__hint" id="email-hint">Сюди надійде запрошення на перше заняття.</span>
+      {%- if "email_empty" in problems %}
+      <span class="field__error" id="email-error">Введіть адресу електронної пошти.</span>
+      {%- elif "email_invalid" in problems %}
+      <span class="field__error" id="email-error">Перевірте адресу: схоже, в ній помилка. Приклад: name@example.com</span>
+      {%- elif "email_domain" in problems %}
+      <span class="field__error" id="email-error">Схоже, на цю адресу пошта не дійде. Перевірте частину після @.</span>
+      {%- endif %}
+    </label>
+    <label class="consent">
+      <input class="consent__box" type="checkbox" name="consent" value="yes"
+             {%- if state and state.consent %} checked{% endif %}
+             {%- if consent_error %} aria-invalid="true" aria-describedby="consent-error"{% endif %}>
+      <span>{{ legal.consent_html }}</span>
+    </label>
+    {%- if consent_error %}
+    <p class="field__error" id="consent-error">Щоб зареєструватися, позначте згоду.</p>
+    {%- endif %}
+    <div class="captcha">
+      <div class="cf-turnstile" data-sitekey="{{ registration.turnstile_site_key }}" data-language="uk" data-theme="light"></div>
+    </div>
+    <input type="hidden" name="ga_client_id" value="">
+    {%- if "human_check_failed" in problems %}
+    <p class="form-error" role="alert" tabindex="-1">Не вдалося підтвердити, що форму заповнює людина. Спробуйте ще раз.</p>
+    {%- elif "too_many_attempts" in problems %}
+    <p class="form-error" role="alert" tabindex="-1">Забагато спроб. Спробуйте ще раз за кілька хвилин.</p>
+    {%- endif %}
+    <p class="form-error" role="alert" tabindex="-1" data-network-error{% if "service_unavailable" not in problems %} hidden{% endif %}>Не вдалося надіслати форму. Перевірте з'єднання і спробуйте ще раз.</p>
+    <button class="btn" type="submit" data-busy-label="Надсилаємо…">Зареєструватися</button>
+  </form>
+</section>
+{%- if not form_fragment | default(false) %}
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&amp;onload=registrationTurnstileLoad" async defer></script>
+<script src="/static/js/registration.js{% if asset_version %}?v={{ asset_version }}{% endif %}" defer></script>
+{%- endif %}
+{%- endif %}
+{%- endif %}
