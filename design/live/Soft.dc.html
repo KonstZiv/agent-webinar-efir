@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Напрям 3 · М'яке світло</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+:root{
+  --color-bg:#F7F5FF;
+  --color-surface:#FFFFFF;
+  --color-text:#1C1733;
+  --color-text-muted:#5B5675;
+  --color-accent:#6236FF;
+  --color-accent-2:#D7F96B;
+  --color-line:#E4DFF5;
+  --color-on-accent:#FFFFFF;
+  --font-sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font-sans);-webkit-text-size-adjust:100%}
+a{color:var(--color-accent);text-underline-offset:3px}
+a:hover{color:var(--color-text)}
+input::placeholder{color:var(--color-text-muted);opacity:1}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--color-accent);outline-offset:3px}
+</style>
+</helmet>
+<div style="--color-accent: {{accent}}; width: 100%; overflow-x: hidden; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans)">
+
+<header style="padding: 20px 16px 56px; max-width: 1040px; margin: 0 auto">
+  <div style="display: flex; flex-direction: column; gap: 24px; padding: 32px 22px 36px; background: var(--color-surface); border-radius: 28px">
+    <p style="margin: 0; align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 14px; border-radius: 999px; background: var(--color-accent-2); color: var(--color-text); font-size: 14px; font-weight: 600">
+      <span aria-hidden="true" style="flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--color-accent)"></span>
+      <span>Прямий ефір · просто зараз</span>
+    </p>
+    <h1 style="margin: 0; font-size: clamp(33px, 9.4vw, 68px); line-height: 1.1; letter-spacing: -0.02em; font-weight: 750">Архітектор замість кодера: як працює агентна розробка на Python</h1>
+    <p style="margin: 0; max-width: 38ch; font-size: 18px; line-height: 1.5; color: var(--color-text-muted)">Практичний гайд: як керувати кодинг-агентами, щоб отримувати продакшн-якість, а не галюцинації.</p>
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <p style="margin: 0; display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 16px; background: var(--color-bg); font-size: 15px; line-height: 1.45; font-weight: 600">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 1px; color: var(--color-accent)"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>
+        <span>Середа, 21 жовтня 2026 року · 19:00–21:00 за Києвом</span>
+      </p>
+      <p style="margin: 0; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 16px; background: var(--color-bg); font-size: 15px; line-height: 1.45; color: var(--color-text-muted)">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none; color: var(--color-accent)"><circle cx="12" cy="8.5" r="3.8"></circle><path d="M4.5 20c1.4-3.6 4.2-5.4 7.5-5.4s6.1 1.8 7.5 5.4"></path></svg>
+        <span>Костянтин Зівенко</span>
+      </p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <a href="#register" style="display: inline-flex; align-items: center; justify-content: center; width: 100%; max-width: 380px; min-height: 56px; padding: 0 28px; border-radius: 999px; background: var(--color-accent); color: var(--color-on-accent); font-size: 17px; font-weight: 700; text-decoration: none">Зареєструватися</a>
+      <p style="margin: 0; max-width: 46ch; font-size: 14px; line-height: 1.55; color: var(--color-text-muted)">Після реєстрації — запрошення на перше заняття курсу 26 жовтня і запис ефіру. За підключення Telegram — інструкція «Зроби сам».</p>
+    </div>
+  </div>
+</header>
+
+<section aria-labelledby="s3-live" style="padding: 0 16px 64px">
+  <div style="max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px">
+    <div style="display: flex; flex-direction: column; gap: 14px; padding: 0 6px">
+      <h2 id="s3-live" style="margin: 0; font-size: clamp(25px, 6.8vw, 40px); line-height: 1.18; letter-spacing: -0.015em; font-weight: 750">Що відбувається в ефірі: Claude Code, Cowork і Design у роботі</h2>
+      <p style="margin: 0; max-width: 60ch; font-size: 16px; line-height: 1.6; color: var(--color-text-muted)">Ведучий наживо проходить шлях від ідеї до працюючого сайту реєстрації на вебінар і виводить його в продакшн. Сайт розгортається кілька разів упродовж ефіру: ви бачите кожен крок.</p>
+    </div>
+    <ol style="margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px">
+      <li style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 22px; background: var(--color-surface)">
+        <span aria-hidden="true" style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--color-accent-2); color: var(--color-text); font-size: 15px; font-weight: 700">1</span>
+        <p style="margin: 0; font-size: 15px; line-height: 1.6; color: var(--color-text-muted)"><strong style="display: block; margin-bottom: 4px; font-size: 17px; line-height: 1.35; color: var(--color-text)">Процес курсу в стислому вигляді.</strong> Шаблон задачі, специфікація, план до коду, тести першими, гейти, рецензент у чистій сесії, паралельні агенти, автономна задача з Issue.</p>
+      </li>
+      <li style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 22px; background: var(--color-surface)">
+        <span aria-hidden="true" style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--color-accent-2); color: var(--color-text); font-size: 15px; font-weight: 700">2</span>
+        <p style="margin: 0; font-size: 15px; line-height: 1.6; color: var(--color-text-muted)"><strong style="display: block; margin-bottom: 4px; font-size: 17px; line-height: 1.35; color: var(--color-text)">Лише інструменти Claude.</strong> Cowork — бриф і тексти; Design — макет; Code — специфікація, код, тести і розгортання; хмарний агент — самостійна задача; Claude in Chrome — перевірка сайту перед виходом.</p>
+      </li>
+      <li style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 22px; background: var(--color-surface)">
+        <span aria-hidden="true" style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--color-accent-2); color: var(--color-text); font-size: 15px; font-weight: 700">3</span>
+        <p style="margin: 0; font-size: 15px; line-height: 1.6; color: var(--color-text-muted)"><strong style="display: block; margin-bottom: 4px; font-size: 17px; line-height: 1.35; color: var(--color-text)">Голосування.</strong> Глядачі обирають голосуванням у <a href="https://t.me/agentic_engineers">Telegram-каналі «Agentic Engineers»</a> макет сайту і фічу, яку реалізує хмарний агент. Реалізується варіант-переможець.</p>
+      </li>
+      <li style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 22px; background: var(--color-surface)">
+        <span aria-hidden="true" style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--color-accent-2); color: var(--color-text); font-size: 15px; font-weight: 700">4</span>
+        <p style="margin: 0; font-size: 15px; line-height: 1.6; color: var(--color-text-muted)"><strong style="display: block; margin-bottom: 4px; font-size: 17px; line-height: 1.35; color: var(--color-text)">Цей сайт зібрано в ефірі.</strong> Ближче до кінця ефіру його відкрито за основною адресою: глядачі реєструвалися і підключали Telegram уже на ньому.</p>
+      </li>
+      <li style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 22px; background: var(--color-surface)">
+        <span aria-hidden="true" style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--color-accent-2); color: var(--color-text); font-size: 15px; font-weight: 700">5</span>
+        <p style="margin: 0; font-size: 15px; line-height: 1.6; color: var(--color-text-muted)"><strong style="display: block; margin-bottom: 4px; font-size: 17px; line-height: 1.35; color: var(--color-text)">Агент підтримки — демонстрація.</strong> Агент підтримки на основі великої мовної моделі показується як демонстрація. Для відвідувачів сайту він не вмикається.</p>
+      </li>
+      <li style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 22px; background: var(--color-surface)">
+        <span aria-hidden="true" style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--color-accent-2); color: var(--color-text); font-size: 15px; font-weight: 700">6</span>
+        <p style="margin: 0; font-size: 15px; line-height: 1.6; color: var(--color-text-muted)"><strong style="font-size: 17px; line-height: 1.35; color: var(--color-text)">Наприкінці</strong> — підсумок, запитання й відповіді.</p>
+      </li>
+    </ol>
+    <p style="margin: 0; padding: 18px 20px; border-radius: 22px; border: 1.5px dashed var(--color-accent); font-size: 15px; line-height: 1.55">Ціль ефіру — 1000 вподобань. Якщо відео набере їх до 30.10.2026, ведучий проведе окреме відкрите заняття про доведення бота до продакшну; дату буде оголошено.</p>
+  </div>
+</section>
+
+<section aria-labelledby="s3-count" style="padding: 0 16px 64px">
+  <div style="max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px">
+    <h2 id="s3-count" style="margin: 0; padding: 0 6px; font-size: 22px; line-height: 1.25; font-weight: 750">Нас уже</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <p style="margin: 0; display: flex; flex-direction: column; gap: 6px; padding: 22px 18px; border-radius: 22px; background: var(--color-surface)">
+        <span style="font-size: clamp(36px, 11vw, 64px); line-height: 1; font-weight: 750; letter-spacing: -0.02em; color: var(--color-accent); font-variant-numeric: tabular-nums">[N]</span>
+        <span style="font-size: 14px; line-height: 1.4; color: var(--color-text-muted)">зареєструвались</span>
+      </p>
+      <p style="margin: 0; display: flex; flex-direction: column; gap: 6px; padding: 22px 18px; border-radius: 22px; background: var(--color-surface)">
+        <span style="font-size: clamp(36px, 11vw, 64px); line-height: 1; font-weight: 750; letter-spacing: -0.02em; color: var(--color-accent); font-variant-numeric: tabular-nums">[N]</span>
+        <span style="font-size: 14px; line-height: 1.4; color: var(--color-text-muted)">підключили Telegram</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="register" aria-labelledby="s3-form" style="padding: 0 16px 88px">
+  <div style="max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; padding: 32px 22px 28px; border-radius: 28px; background: var(--color-surface)">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <h2 id="s3-form" style="margin: 0; font-size: clamp(28px, 7.4vw, 40px); line-height: 1.12; letter-spacing: -0.015em; font-weight: 750">Зареєструватися</h2>
+      <p style="margin: 0; font-size: 16px; line-height: 1.55; color: var(--color-text-muted)">Запрошення на перше заняття курсу — одразу на пошту. Потрібна лише адреса електронної пошти.</p>
+    </div>
+    <form novalidate="" onSubmit="{{prevent}}" style="display: flex; flex-direction: column; gap: 22px">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="s3-email" style="padding-left: 4px; font-size: 15px; font-weight: 600">Електронна пошта</label>
+        <input id="s3-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" aria-describedby="s3-email-hint" style="width: 100%; min-height: 54px; padding: 0 18px; border: 1.5px solid var(--color-text-muted); border-radius: 16px; background: var(--color-surface); color: var(--color-text); font: inherit; font-size: 17px">
+        <p id="s3-email-hint" style="margin: 0; padding-left: 4px; font-size: 14px; line-height: 1.45; color: var(--color-text-muted)">Сюди надійде запрошення на перше заняття.</p>
+      </div>
+      <div style="display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 12px; align-items: start; padding: 16px; border-radius: 18px; background: var(--color-bg)">
+        <input id="s3-consent" name="consent" type="checkbox" required="" style="width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--color-accent)">
+        <label for="s3-consent" style="font-size: 14px; line-height: 1.55">Я погоджуюся, що організатор вебінару Костянтин Зівенко обробляє мої дані, щоб надсилати мені листи й повідомлення про вебінар, перше заняття, матеріали і курс «Агентна розробка на Python», а також про наступні вебінари й курси ведучого, і передає мою адресу електронної пошти навчальному центру CyberBionic Systematics (CBS), який проводить курс, для зв'язку зі мною щодо навчання. Відкликати згоду можна будь-коли; докладніше — в <a href="/privacy">політиці приватності</a>.</label>
+      </div>
+      <div aria-hidden="true" style="width: 300px; max-width: 100%; height: 65px; border: 1.5px dashed var(--color-line); border-radius: 12px"></div>
+      <button type="submit" style="width: 100%; min-height: 56px; padding: 0 28px; border: 0; border-radius: 999px; background: var(--color-accent); color: var(--color-on-accent); font: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Зареєструватися</button>
+    </form>
+  </div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#6236FF","options":["#6236FF","#0E7C66","#C2185B","#1C1733"]},"$preview":{"width":375,"height":3800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      accent: this.props.accent ?? '#6236FF',
+      prevent: (e) => e.preventDefault(),
+    };
+  }
+}
+</script>
+</body>
+</html>
