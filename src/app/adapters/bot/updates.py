@@ -13,7 +13,7 @@ identity anyway.
 import json
 import re
 
-from app.core.bot.commands import Command, Recheck, Start
+from app.core.bot.commands import Command, FreeText, Recheck, Start
 from app.core.bot.replies import RECHECK
 from app.core.entities import TelegramAccount
 
@@ -24,8 +24,10 @@ _USERNAME = re.compile(r"[A-Za-z0-9_]{1,64}")
 type Json = dict[str, object]
 
 
-def parse_update(body: bytes) -> Command | None:
+def parse_update(body: bytes, *, free_text: bool = False) -> Command | None:
     """The command in a webhook body, or ``None`` for anything the bot does not handle.
+
+    ``free_text``: a private text that is not a command counts too (the LLM draft is on).
 
     >>> parse_update(b'{"update_id": 1, "edited_message": {}}') is None
     True
@@ -37,13 +39,13 @@ def parse_update(body: bytes) -> Command | None:
     if not isinstance(update, dict):
         return None
     if "message" in update:
-        return _start(_object(update["message"]))
+        return _start(_object(update["message"]), free_text)
     if "callback_query" in update:
         return _recheck(_object(update["callback_query"]))
     return None
 
 
-def _start(message: Json | None) -> Start | None:
+def _start(message: Json | None, free_text: bool = False) -> Start | FreeText | None:
     if message is None:
         return None
     chat_id = _private_chat(message)
@@ -53,6 +55,8 @@ def _start(message: Json | None) -> Start | None:
         return None
     command, _, rest = text.strip().partition(" ")
     if command != START and not command.startswith(f"{START}@"):
+        if free_text and text.strip() and not text.lstrip().startswith("/"):
+            return FreeText(chat_id, account, text.strip())
         return None
     return Start(chat_id, account, rest.strip() or None)
 

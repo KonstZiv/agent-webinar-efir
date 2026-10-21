@@ -22,7 +22,7 @@ import logging
 from functools import partial
 
 from app.adapters.bot import telegram
-from app.adapters.bot.keys import DIALOG, PAUSE, WORKERS
+from app.adapters.bot.keys import DIALOG, LLM_RESPONDER, PAUSE, WORKERS
 from app.adapters.bot.webhook import STOP_WAIT, StoppablePause, WebhookThread
 from app.adapters.bot.workers import BOT_AT_ONCE, BotWorkers
 from app.adapters.web.routers.bot import PATH
@@ -75,6 +75,7 @@ def install(setup: SliceSetup) -> None:
                 site_url=site_url, materials_url=materials_url, channel=settings.telegram_channel
             ),
             channel=settings.telegram_channel,
+            free_text=services.find(LLM_RESPONDER),  # only on staging with LLM_ENABLED
         ),
     )
 

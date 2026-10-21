@@ -24,6 +24,14 @@ class MessengerRateLimited(MessengerUnavailable):
         self.retry_after = retry_after
 
 
+class FreeTextResponder(Protocol):
+    """Answers a person's free text; the LLM draft (staging only) is the one implementation."""
+
+    def respond(self, user_id: int, text: str) -> str:
+        """The text to send to the person who is ``user_id`` in Telegram."""
+        ...
+
+
 class Pause(Protocol):
     """The wait between two attempts to register the webhook."""
 

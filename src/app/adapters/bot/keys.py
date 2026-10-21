@@ -7,9 +7,12 @@ Without the bot settings nobody provides them, and the webhook answers 404.
 
 from app.adapters.bot.workers import BotWorkers
 from app.core.bot.dialog import BotDialog
-from app.core.bot.ports import Pause
+from app.core.bot.ports import FreeTextResponder, Pause
 from app.services import Key
 
 DIALOG = Key[BotDialog]("bot.dialog")
 WORKERS = Key[BotWorkers]("bot.workers")
 PAUSE = Key[Pause]("bot.pause")  # between the attempts to register the webhook
+# Provided by the slice «llm» under this name, only when ``LLM_ENABLED``; the bot looks for it
+# and does without. Slices do not import each other: the name of the key is what they share.
+LLM_RESPONDER = Key[FreeTextResponder]("llm.responder")
