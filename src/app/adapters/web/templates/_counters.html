@@ -1,0 +1,19 @@
+{#-
+  The counters of the slice «лічильники й експорт» (docs/requirements.md, sections 8 and 12):
+  numbers only. On the page (no counters_state) it shows «—» and asks htmx for the numbers at
+  once and every 15 seconds, so rendering the page never reads the database; GET /counters
+  answers with this partial carrying the numbers, polling on without «load» (the swap would ask
+  again at once). Only a 200 replaces it: the htmx config of base.html swaps in 422, 429 and
+  503 for the form, and a 503 or 429 of a proxy in front would end the polling. htmx comes from
+  base.html. Texts are verbatim from docs/copy.md 1.9. Renders nothing where the slice is not
+  installed.
+-#}
+{%- if counters is defined -%}
+{%- set state = counters_state | default(none) -%}
+{%- set every = "every " ~ counters.refresh_seconds ~ "s" %}
+<section class="counters" aria-labelledby="counters-title" hx-get="{{ counters.url }}" hx-trigger="{{ every if state else 'load, ' ~ every }}" hx-swap="outerHTML" hx-on::before-swap="event.detail.shouldSwap = event.detail.xhr.status === 200">
+  <h2 class="counters__title" id="counters-title">Нас уже</h2>
+  <p class="counters__item"><span class="counters__number">{{ state.registered if state else "—" }}</span> <span class="counters__label">зареєструвались</span></p>
+  <p class="counters__item"><span class="counters__number">{{ state.telegram_linked if state else "—" }}</span> <span class="counters__label">підключили Telegram</span></p>
+</section>
+{%- endif -%}

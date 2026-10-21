@@ -1,0 +1,36 @@
+/* The slice «лічильники й експорт»: two numbers on the page (_counters.html). Mobile first at
+   375 px; the colours come from the tokens of site.css. A number and the «—» shown before it
+   take the same width, so the page does not jump when htmx brings the numbers. */
+
+.counters {
+  display: grid;
+  gap: 8px;
+  margin-top: 24px;
+  padding: 28px var(--side) 32px;
+  border-top: 1px solid var(--line);
+}
+
+.counters__title {
+  margin: 0 0 4px;
+  font: 800 24px/1.2 var(--font);
+}
+
+.counters__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0;
+}
+
+.counters__number {
+  display: inline-block;
+  min-width: 4ch;
+  font: 800 32px/1.1 var(--font);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.counters__label {
+  color: var(--ink-2);
+}
