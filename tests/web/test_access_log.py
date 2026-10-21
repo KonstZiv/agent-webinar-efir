@@ -125,3 +125,29 @@ def test_app_masks_with_the_current_prefixes(
     record = access_record(f"/t/{TOKEN}")
     mask.filter(record)
     assert record.getMessage() == '192.0.2.10:5000 - "POST /t/*** HTTP/1.1" 200'
+
+
+@pytest.mark.usefixtures("no_access_filters")
+@pytest.mark.parametrize(
+    ("path", "logged"),
+    [
+        (f"/unsubscribe/{TOKEN}", "/unsubscribe/***"),
+        (
+            f"/unsubscribe/{TOKEN}?List-Unsubscribe=One-Click",
+            "/unsubscribe/***?List-Unsubscribe=One-Click",
+        ),
+        ("/m/Secret_Slug-01", "/m/***"),
+        ("/m/Secret_Slug-01?utm_source=bot", "/m/***?utm_source=bot"),
+    ],
+    ids=["unsubscribe", "unsubscribe-query", "materials", "materials-query"],
+)
+def test_app_masks_unsubscribe_tokens_and_the_materials_path(
+    make_settings: SettingsFactory, path: str, logged: str
+) -> None:
+    """A token is a permission to delete; the materials address is given only by the bot."""
+    create_app(make_settings(), db_probe=FakeDatabaseProbe())
+
+    [mask] = mask_filters()
+    record = access_record(path)
+    mask.filter(record)
+    assert record.getMessage() == f'192.0.2.10:5000 - "POST {logged} HTTP/1.1" 200'

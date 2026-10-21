@@ -215,6 +215,21 @@ def _privacy(md: MarkdownIt, text: str) -> tuple[str, Markup]:
     return title, Markup(_renderer(md).render(tokens, md.options, {}))
 
 
+def render_document(text: str) -> Markup:
+    """A whole Markdown document as HTML by the same rules: raw HTML escaped, bare links."""
+    md = _markdown()
+    return Markup(_renderer(md).render(md.parse(text), md.options, {}))
+
+
+def render_inline(text: str) -> Markup:
+    """One line of Markdown as inline HTML by the same rules: bold and links, raw HTML escaped.
+
+    >>> render_inline("**Bold** and [a link](https://example.com) <b>")
+    Markup('<strong>Bold</strong> and <a href="https://example.com">a link</a> &lt;b&gt;')
+    """
+    return Markup(_markdown().renderInline(text))
+
+
 def _consent(md: MarkdownIt, text: str) -> Markup:
     paragraphs = _paragraphs(_section(md.parse(text), CONSENT_SECTION, CONSENT_FILE))
     if not paragraphs:

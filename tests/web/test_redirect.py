@@ -127,7 +127,8 @@ def test_without_redirect_base_url_the_site_works(
         assert client.get("/").status_code == 200
         assert client.get("/privacy").status_code == 200
         assert client.get("/favicon.ico").status_code == 200
-        assert client.get("/go/stream").status_code == 404
+        # A path no part of the site serves (the slices add /go/stream and others).
+        assert client.get("/no-such-page").status_code == 404
 
 
 # --- the location itself -------------------------------------------------------------------

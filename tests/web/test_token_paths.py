@@ -1,7 +1,8 @@
 """One list of path prefixes whose next segment is a secret token (no drifting copies).
 
 Routes with a ``{token}`` parameter, the access log and the analytics switch all follow it.
-The template has no such routes yet, so the list is empty; the checks still run.
+The foundation lists ``/unsubscribe/`` before its route exists (docs/contract.md, section 10)
+and ``/m/``, the materials page whose address only the bot gives.
 """
 
 import pytest
@@ -30,9 +31,12 @@ def token_routes_outside(routers_: list[APIRouter], prefixes: tuple[str, ...]) -
     ]
 
 
-def test_the_template_has_no_token_paths_yet() -> None:
-    assert TOKEN_PATH_PREFIXES == ()
-    assert not carries_token("/t/abc")
+def test_unsubscribe_and_materials_are_token_paths() -> None:
+    assert TOKEN_PATH_PREFIXES == ("/unsubscribe/", "/m/")
+    assert carries_token("/unsubscribe/abc.def")
+    assert carries_token("/m/Secret_Slug-01")
+    assert not carries_token("/materials")
+    assert not carries_token("/")
 
 
 def test_carries_token() -> None:
@@ -68,3 +72,48 @@ def test_pages_under_a_token_prefix_load_no_analytics(
         page = parse(client.get("/privacy").text)
 
     assert page.find("body").attrs["data-ga4-id"] == ga4_id
+
+
+SLUG = "Materials_Slug-01"
+
+
+@pytest.mark.parametrize(
+    ("path", "statuses"),
+    [
+        (f"/m/{SLUG}", {200}),
+        ("/m/wrong-slug", {404}),
+        # 404 until the slice «реєстрація і лист» adds the route, then 400 for a forged token.
+        ("/unsubscribe/abc.def", {400, 404}),
+    ],
+)
+def test_pages_under_a_token_prefix_send_no_referrer(
+    make_settings: SettingsFactory, path: str, statuses: set[int]
+) -> None:
+    """A click from such a page to another page of the site must not carry the token along.
+
+    The same origin would get the full address in ``Referer``, and analytics there would
+    report it to Google as the referring page.
+    """
+    app = create_app(make_settings(MATERIALS_SLUG=SLUG), db_probe=FakeDatabaseProbe())
+
+    with TestClient(app) as client:
+        response = client.get(path)
+
+    assert response.status_code in statuses
+    assert response.headers["Referrer-Policy"] == "no-referrer"
+
+
+@pytest.mark.parametrize("prefix", TOKEN_PATH_PREFIXES)
+def test_every_token_prefix_sends_no_referrer(make_settings: SettingsFactory, prefix: str) -> None:
+    with TestClient(create_app(make_settings(), db_probe=FakeDatabaseProbe())) as client:
+        response = client.get(f"{prefix}token")
+
+    assert response.headers["Referrer-Policy"] == "no-referrer"
+
+
+@pytest.mark.parametrize("path", ["/", "/privacy", "/healthz"])
+def test_other_pages_keep_the_default_policy(make_settings: SettingsFactory, path: str) -> None:
+    with TestClient(create_app(make_settings(), db_probe=FakeDatabaseProbe())) as client:
+        response = client.get(path)
+
+    assert "Referrer-Policy" not in response.headers

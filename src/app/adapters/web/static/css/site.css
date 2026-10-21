@@ -59,20 +59,40 @@ code {
   margin: 0 auto;
 }
 
-/* Service page (/) */
+/* Fallback page of / (home.html): the first screen until the landing arrives */
 
-.service {
-  padding: 40px var(--side) 8px;
+.hero {
+  padding: 40px var(--side) 24px;
 }
 
-.service h1 {
+.hero__eyebrow {
   margin: 0;
-  font: 800 28px/1.1 var(--font);
+  color: var(--ink-2);
+  font-weight: 600;
 }
 
-.service p {
+.hero__title {
+  margin: 8px 0 0;
+  font: 800 28px/1.15 var(--font);
+}
+
+.hero__subtitle,
+.hero__when,
+.hero__host,
+.hero__note {
   margin: 12px 0 0;
   color: var(--ink-2);
+}
+
+.hero__button {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 12px 22px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+  text-decoration: none;
 }
 
 /* Legal texts (docs/legal) */
@@ -110,6 +130,10 @@ code {
 .prose td,
 .prose th {
   overflow-wrap: anywhere;
+}
+
+.prose pre {
+  overflow-x: auto;
 }
 
 /* Wide tables scroll inside their own box instead of widening the page */

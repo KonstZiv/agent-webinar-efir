@@ -61,6 +61,28 @@ def test_uvicorn_does_not_start_without_database_url() -> None:
     assert_no_values_leak(result.stdout + result.stderr)
 
 
+@pytest.mark.parametrize(
+    ("overrides", "named"),
+    [
+        ({"PUBLIC_BASE_URL": None}, "PUBLIC_BASE_URL"),
+        ({"ADMIN_TOKEN": None}, "ADMIN_TOKEN"),
+        ({"SITE_MODE": "replay"}, "RECORDING_YOUTUBE_ID"),
+        ({"SITE_MODE": "course"}, "SITE_MODE"),
+    ],
+    ids=["no-public-base-url", "no-admin-token", "replay-without-recording", "unknown-mode"],
+)
+def test_uvicorn_does_not_start_without_what_the_mode_needs(
+    overrides: dict[str, str | None], named: str
+) -> None:
+    """Without a required setting there is no app, so /healthz never answers 200 for it."""
+    result = run_uvicorn(overrides)
+
+    output = result.stdout + result.stderr
+    assert result.returncode != 0
+    assert named in output
+    assert_no_values_leak(output)
+
+
 def test_uvicorn_does_not_start_with_invalid_redirect_base_url() -> None:
     raw = "https://new.example.com?x=1"
 

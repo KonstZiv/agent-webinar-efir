@@ -5,10 +5,11 @@ from collections.abc import Iterator
 
 import pytest
 from sqlalchemy import Engine, event, text
+from sqlalchemy.exc import DBAPIError
 
 from app.adapters.db.engine import TIMEOUT_SECONDS
 from app.adapters.db.probe import SqlDatabaseProbe
-from tests.db.conftest import disposable_engine
+from tests.database import disposable_engine
 
 
 @pytest.fixture
@@ -69,3 +70,11 @@ def test_probe_gives_up_when_pool_is_exhausted(engine: Engine) -> None:
 
     assert available is False
     assert elapsed < TIMEOUT_SECONDS + 1
+
+
+def test_errors_never_carry_statement_parameters(engine: Engine) -> None:
+    """A failed statement's message may reach a log: the values it was given stay out of it."""
+    with engine.connect() as connection, pytest.raises(DBAPIError) as failure:
+        connection.execute(text("SELECT :email AS email, 1 / 0"), {"email": "visitor@example.com"})
+
+    assert "visitor@example.com" not in str(failure.value)

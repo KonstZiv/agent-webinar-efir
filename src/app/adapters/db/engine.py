@@ -10,10 +10,12 @@ TIMEOUT_SECONDS = 2
 def make_engine(database_url: str) -> Engine:
     """Create a lazily connecting engine; failures surface on first use, not at startup.
 
-    ``database_url`` is already validated and normalised by ``Settings``.
+    ``database_url`` is already validated and normalised by ``Settings``. Error messages leave
+    out statement parameters: they hold addresses and may reach a log.
     """
     return create_engine(
         database_url,
+        hide_parameters=True,
         pool_pre_ping=True,
         pool_timeout=TIMEOUT_SECONDS,
         connect_args={

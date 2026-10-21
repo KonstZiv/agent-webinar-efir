@@ -6,7 +6,8 @@ variables, routes, the token module, the token prefix and the lead cookie. Behav
 by the tests of the slices.
 
 A row marked «ні» is owed by a v2 slice and is checked as well: the template must not have it
-yet, so the slice that adds it has to update the contract. At the stage «запуск» every row
+yet, so the slice that adds it has to update the contract; only the token prefix of such a path
+may come first. At the stage «запуск» every row
 marked «ні» fails, and so does a script without the contract's lead cookie line. Nothing is
 skipped, and nothing from the contract is read while tests are collected: a missing or broken
 contract fails these tests, not the whole run.
@@ -270,15 +271,17 @@ def owed_at_launch(stage: str, rows: list[Row]) -> list[str]:
 
 
 def misplaced_token_paths(rows: list[Row], prefixes: tuple[str, ...]) -> list[str]:
-    """Rows with ``{token}``: under a token prefix exactly when marked «так».
+    """Rows with ``{token}`` marked «так» that lie outside every token prefix.
 
-    The prefix keeps the token out of the access log and Google Analytics.
+    The prefix keeps the token out of the access log and Google Analytics. A row marked «ні»
+    may already sit under a prefix: masking may come before the route (contract, section 10).
     """
     return [
         row.name
         for row in rows
         if "{token}" in row.name
-        and carries_token(concrete(row.name), prefixes) != (row.status == PRESENT)
+        and row.status == PRESENT
+        and not carries_token(concrete(row.name), prefixes)
     ]
 
 
@@ -525,7 +528,8 @@ def test_token_paths_sit_under_a_token_prefix_once_served() -> None:
     assert misplaced_token_paths(path_rows(), token_paths.TOKEN_PATH_PREFIXES) == []
 
 
-def test_token_prefix_check_finds_both_mistakes() -> None:
+def test_token_prefix_check_finds_served_paths_outside_a_prefix() -> None:
+    """A prefix may come before its route (contract, section 10); a served route needs one."""
     rows = [
         Row("/t/{token}", PRESENT),
         Row("/open/{token}", PRESENT),
@@ -534,7 +538,7 @@ def test_token_prefix_check_finds_both_mistakes() -> None:
         Row("/plain", PRESENT),
     ]
 
-    assert misplaced_token_paths(rows, ("/t/", "/early/")) == ["/open/{token}", "/early/{token}"]
+    assert misplaced_token_paths(rows, ("/t/", "/early/")) == ["/open/{token}"]
 
 
 def test_served_token_paths_accept_the_reference_token(probe: Probe) -> None:

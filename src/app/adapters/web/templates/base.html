@@ -3,11 +3,29 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{% endblock %}</title>
+  <title>{% block title %}{% if page_meta %}{{ page_meta.title }}{% endif %}{% endblock %}</title>
   {% if noindex or not indexing_enabled %}<meta name="robots" content="noindex">{% endif %}
-  {% block meta %}{% endblock %}
-  <link rel="stylesheet" href="/static/css/site.css{% if asset_version %}?v={{ asset_version }}{% endif %}">
+  {% block meta %}{% if page_meta %}
+  <meta name="description" content="{{ page_meta.description }}">
+  <link rel="canonical" href="{{ page_meta.canonical }}">
+  <meta property="og:title" content="{{ page_meta.og_title }}">
+  <meta property="og:description" content="{{ page_meta.og_description }}">
+  <meta property="og:site_name" content="{{ page_meta.og_site_name }}">
+  <meta property="og:url" content="{{ page_meta.og_url }}">
+  <meta property="og:type" content="{{ page_meta.og_type }}">
+  <meta property="og:locale" content="{{ page_meta.og_locale }}">
+  <meta property="og:image" content="{{ page_meta.og_image }}">
+  <meta property="og:image:alt" content="{{ page_meta.og_image_alt }}">
+  <meta name="twitter:card" content="{{ page_meta.twitter_card }}">
+  <script type="application/ld+json">{{ page_meta.json_ld }}</script>
+  {% endif %}{% endblock %}
+  {% for sheet in stylesheets %}
+  <link rel="stylesheet" href="/static/css/{{ sheet }}{% if asset_version %}?v={{ asset_version }}{% endif %}">
+  {% endfor %}
   <script src="/static/js/consent.js{% if asset_version %}?v={{ asset_version }}{% endif %}" defer></script>
+  {# htmx for every slice's partial, as in v1: answers 422, 429 and 503 replace the form. #}
+  <meta name="htmx-config" content='{"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"422|429|503","swap":true},{"code":"[45]..","swap":false,"error":true}]}'>
+  <script src="/static/js/htmx.min.js{% if asset_version %}?v={{ asset_version }}{% endif %}" defer></script>
   {% block scripts %}{% endblock %}
 </head>
 <body data-ga4-id="{{ ga4_id }}">

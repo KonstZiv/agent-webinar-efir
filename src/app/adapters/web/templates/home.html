@@ -1,8 +1,73 @@
+{#- The fallback page of / until the live slice adds landing.html (routers/home.py).
+    ``hero`` comes from the route; ``blocks`` (1.2–1.7) from the foundation on every render. -#}
 {% extends "base.html" %}
-{% block title %}{{ title }}{% endblock %}
 {% block main %}
-<section class="service">
-  <h1>{{ title }}</h1>
-  {% if commit_short %}<p>Коміт <code>{{ commit_short }}</code></p>{% endif %}
+{%- macro course_section_body(section) -%}
+  {{ section.html }}
+  {% for block in section.blocks %}
+  <details>
+    <summary>{{ block.title }}</summary>
+    {{ block.html }}
+  </details>
+  {% endfor %}
+{%- endmacro %}
+<section class="hero">
+  <p class="hero__eyebrow">{{ hero.eyebrow }}</p>
+  <h1 class="hero__title">{{ hero.title }}</h1>
+  <p class="hero__subtitle">{{ hero.subtitle }}</p>
+  <p class="hero__when">{{ hero.when }}</p>
+  <p class="hero__host">{{ hero.host }}</p>
+  <a class="hero__button" href="#register">{{ hero.button }}</a>
+  <p class="hero__note">{{ hero.note }}</p>
 </section>
+<section class="prose">
+  <h2>{{ blocks.on_air.title }}</h2>
+  <p>{{ blocks.on_air.intro }}</p>
+  <ol>
+    {% for item in blocks.on_air.items %}<li>{{ item }}</li>{% endfor %}
+  </ol>
+  {% if blocks.on_air.likes_goal %}<p>{{ blocks.on_air.likes_goal }}</p>{% endif %}
+</section>
+{% include "_counters.html" ignore missing %}
+<section class="prose">
+  <h2>{{ blocks.audience.title }}</h2>
+  <ul>
+    {% for item in blocks.audience.items %}<li>{{ item }}</li>{% endfor %}
+  </ul>
+  <h3>{{ blocks.audience.subtitle }}</h3>
+  <p>{{ blocks.audience.text }}</p>
+  <p>{{ blocks.audience.note }}</p>
+</section>
+<section class="prose">
+  <h2>{{ blocks.benefits.title }}</h2>
+  <ol>
+    {% for item in blocks.benefits.items %}<li>{{ item }}</li>{% endfor %}
+  </ol>
+</section>
+<section class="prose">
+  <h2>{{ blocks.channel.title }}</h2>
+  <p>{{ blocks.channel.text }}</p>
+  <p>{{ blocks.channel.link }}</p>
+</section>
+<section class="prose">
+  <h2>{{ blocks.presenter.title }}</h2>
+  <p><strong>{{ blocks.presenter.name }}</strong></p>
+  <p>{{ blocks.presenter.text }}</p>
+</section>
+<section class="prose">
+  <h2>{{ blocks.course.title }}</h2>
+  <p>{{ blocks.course.intro }}</p>
+  {% for section in blocks.course.sections %}
+  {% if section.always_visible %}
+  <h3>{{ section.title }}</h3>
+  {{ course_section_body(section) }}
+  {% else %}
+  <details>
+    <summary>{{ section.title }}</summary>
+    {{ course_section_body(section) }}
+  </details>
+  {% endif %}
+  {% endfor %}
+</section>
+{% include "_form.html" ignore missing %}
 {% endblock %}

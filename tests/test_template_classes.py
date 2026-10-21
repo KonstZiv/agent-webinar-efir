@@ -1,4 +1,8 @@
-"""Every class the page templates use is styled in site.css (no dead class names)."""
+"""Every class the page templates use is styled in one of the files of static/css.
+
+Each slice and the layout style their own partials in their own file (requirements, section 12),
+so the search covers all files; no dead class names.
+"""
 
 import re
 from pathlib import Path
@@ -8,7 +12,9 @@ import pytest
 from tests.conftest import REPO_ROOT
 
 WEB = REPO_ROOT / "src" / "app" / "adapters" / "web"
-CSS = (WEB / "static" / "css" / "site.css").read_text(encoding="utf-8")
+CSS = "\n".join(
+    path.read_text(encoding="utf-8") for path in sorted((WEB / "static" / "css").glob("*.css"))
+)
 TEMPLATES = sorted((WEB / "templates").rglob("*.html"))
 
 
