@@ -1,4 +1,4 @@
-"""v1's tables: a verbatim copy of v1's revision 0001 (agent-webinar-v1, commit fee3439).
+"""v1's tables: a verbatim copy of v1's revision 0001 (v1, commit fee3439).
 
 Revision ID: 0001
 Revises:
