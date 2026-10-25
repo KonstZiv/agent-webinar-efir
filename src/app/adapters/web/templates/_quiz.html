@@ -1,0 +1,51 @@
+{#-
+  The level quiz of the feature Ф3 on the success screen (docs/requirements.md, sections 4 and
+  12): div#quiz, which POST /quiz replaces with the result or with the form and its problem
+  (htmx; the swap scrolls to the top of the block, so the result stays on screen). Without
+  JavaScript the form posts to the anchor of the result. The ticket in the hidden field is the
+  permission to answer: it is made for the address of the success screen. Questions and results:
+  docs/quiz.md; interface texts: docs/copy.md 12.3, verbatim. Renders nothing where the slice is
+  not installed.
+-#}
+{%- if quiz is defined -%}
+{%- set state = quiz_state | default(none) -%}
+{%- set address = registration_state.email if registration_state is defined and registration_state else "" -%}
+{%- if state or address -%}
+<div class="quiz" id="quiz">
+  <h3 class="quiz__title">{{ quiz.texts.title }}</h3>
+  {%- if state and state.result %}
+  <div class="quiz__outcome" id="quiz-result" tabindex="-1">
+    <h4 class="quiz__result">{{ state.result.name }}</h4>
+    <p>{{ state.result.advice }}</p>
+  </div>
+  {%- elif state and state.problem == "expired" %}
+  <p class="quiz__error" id="quiz-result" role="alert" tabindex="-1">{{ quiz.texts.expired }}</p>
+  {%- else %}
+  <p class="quiz__intro">{{ quiz.texts.intro }}</p>
+  <form class="quiz__form" method="post" action="{{ quiz.url }}#quiz-result" novalidate
+        hx-post="{{ quiz.url }}" hx-target="#quiz" hx-swap="outerHTML show:#quiz:top">
+    <input type="hidden" name="{{ quiz.ticket_field }}" value="{{ state.ticket if state else quiz.ticket(address) }}">
+    {%- if state and state.problem == "incomplete" %}
+    <p class="quiz__error" id="quiz-result" role="alert" tabindex="-1">{{ quiz.texts.incomplete }}</p>
+    {%- elif state and state.problem == "not_saved" %}
+    <p class="quiz__error" id="quiz-result" role="alert" tabindex="-1">{{ quiz.texts.not_saved }}</p>
+    {%- endif %}
+    {%- for question in quiz.quiz.questions %}
+    {%- set number = loop.index %}
+    <fieldset class="quiz__question">
+      <legend class="quiz__legend">{{ question.text }}</legend>
+      {%- for option in question.options %}
+      <label class="quiz__option">
+        <input class="quiz__radio" type="radio" name="{{ quiz.field(number) }}" value="{{ loop.index0 }}"
+               {%- if state and state.chosen.get(number) == loop.index0 %} checked{% endif %}>
+        <span>{{ option.text }}</span>
+      </label>
+      {%- endfor %}
+    </fieldset>
+    {%- endfor %}
+    <button class="quiz__button" type="submit">{{ quiz.texts.button }}</button>
+  </form>
+  {%- endif %}
+</div>
+{%- endif -%}
+{%- endif -%}

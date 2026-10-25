@@ -1,0 +1,11 @@
+{#-
+  The answer of POST /quiz without JavaScript: a small page with the block of the quiz
+  (_quiz.html), where the form of the quiz leads to the anchor of the result.
+-#}
+{% extends "base.html" %}
+{% block title %}{{ quiz.texts.title }}{% endblock %}
+{% block main %}
+<section class="quiz-page">
+{% include "_quiz.html" %}
+</section>
+{% endblock %}
