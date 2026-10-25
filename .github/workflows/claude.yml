@@ -4,13 +4,11 @@
 # runs the repository gates, a plan-first instruction, a timeout and one run per issue at a time.
 # Only people with write access can start the agent: the action checks the actor's permission
 # and rejects bots (allowed_bots, allowed_non_write_users and github_token are deliberately unset).
-# Subprocess isolation: CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1" in the job env strips credentials,
-# the OAuth token included, from the agent's Bash commands, hooks and MCP servers, and runs Bash
-# commands in a bubblewrap sandbox with their own PID namespace. GitHub tokens stay visible by
-# design, hence the narrow job permissions. On Linux the scrub needs bubblewrap, or Claude Code
-# exits at startup; the action installs it only with allowed_non_write_users, so a step before
-# the action repeats that setup (bubblewrap, socat, user namespaces allowed for Ubuntu 24.04's
-# AppArmor) and checks bwrap, failing the job rather than running the agent without isolation.
+# No subprocess isolation for now: CLAUDE_CODE_SUBPROCESS_ENV_SCRUB is unset, so the agent's Bash
+# commands inherit Claude Code's credentials, the OAuth token included. Setting it to "1" needs
+# bubblewrap on the runner; without it the run fails ("bubblewrap is required for subprocess env
+# scrubbing"). Bring it back before the repository goes public: install bubblewrap in a step
+# and set CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1" in the job env.
 name: Claude Code
 on:
   issue_comment:
@@ -41,10 +39,6 @@ jobs:
       issues: write
       pull-requests: write
       id-token: write # OIDC exchange for the Claude GitHub App token
-    env:
-      # Strips credentials from the agent's subprocesses and sandboxes its Bash commands
-      # (Claude Code docs: env-vars; claude-code-action docs/security.md).
-      CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
     services:
       postgres:
         image: postgres:17-alpine
@@ -64,17 +58,6 @@ jobs:
         with:
           fetch-depth: 1
       - uses: astral-sh/setup-uv@v10.2.0
-      - name: Ізоляція підпроцесів агента
-        timeout-minutes: 5
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends bubblewrap socat
-          # Ubuntu 24.04 restricts unprivileged user namespaces via AppArmor; bwrap needs them.
-          if [ -f /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
-            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-          fi
-          # Fail here rather than start the agent without isolation.
-          bwrap --ro-bind / / --dev /dev --proc /proc --unshare-pid true
       - name: Агент Claude Code
         uses: anthropics/claude-code-action@v1
         with:
