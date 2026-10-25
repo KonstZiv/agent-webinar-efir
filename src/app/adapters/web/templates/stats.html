@@ -1,0 +1,48 @@
+{#-
+  The live statistics of the slice «жива статистика» (the issue «Statistic»): aggregates only.
+  Texts are verbatim from docs/copy.md 12.2; level names are from docs/quiz.md. The chart is an
+  inline SVG that scales with the page: one bar per hour, the title of each bar says the hour
+  and the count. No scripts. Without numbers (the database fails and nothing is known yet) only
+  the message is shown.
+-#}
+{% extends "base.html" %}
+{% block title %}{{ texts.title }}{% endblock %}
+{% block main %}
+<article class="stats">
+  <h1 class="stats__title">{{ texts.title }}</h1>
+  {% if view is none %}
+  <p class="stats__failure" role="status">{{ texts.failure }}</p>
+  {% else %}
+  <section class="stats__section" aria-labelledby="stats-registrations">
+    <h2 class="stats__heading" id="stats-registrations">{{ texts.registrations }}</h2>
+    <p class="stats__total"><span class="stats__number">{{ view.total }}</span> <span class="stats__label">{{ texts.total }}</span></p>
+  </section>
+  <section class="stats__section" aria-labelledby="stats-chart">
+    <h2 class="stats__heading" id="stats-chart">{{ texts.chart_title }}</h2>
+    <svg class="stats__chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img" aria-labelledby="stats-chart stats-chart-caption" focusable="false">
+      <line class="stats__baseline" x1="0" y1="{{ chart.plot_height }}" x2="{{ chart.width }}" y2="{{ chart.plot_height }}"/>
+      {% for bar in chart.bars %}
+      <rect class="stats__bar" x="{{ bar.x }}" y="{{ bar.y }}" width="{{ bar.width }}" height="{{ bar.height }}" data-count="{{ bar.count }}"><title>{{ bar.label }} — {{ bar.count }}</title></rect>
+      {% endfor %}
+      <text class="stats__axis" x="0" y="{{ chart.label_y }}" text-anchor="start">{{ chart.first_label }}</text>
+      <text class="stats__axis" x="{{ chart.width }}" y="{{ chart.label_y }}" text-anchor="end">{{ chart.last_label }}</text>
+    </svg>
+    <p class="stats__caption" id="stats-chart-caption">{{ texts.chart_caption }}</p>
+  </section>
+  <section class="stats__section" aria-labelledby="stats-telegram">
+    <h2 class="stats__heading" id="stats-telegram">{{ texts.telegram_title }}</h2>
+    <p class="stats__share"><span class="stats__number">{{ share_percent }}%</span> <span class="stats__label">{{ texts.share }}</span></p>
+    <p class="stats__caption" id="telegram-caption">{{ share_caption }}</p>
+  </section>
+  <section class="stats__section" aria-labelledby="stats-levels">
+    <h2 class="stats__heading" id="stats-levels">{{ texts.levels_title }}</h2>
+    <ul class="stats__levels">
+      {% for level in view.levels %}
+      <li class="stats__level"><span class="stats__level-name">{{ level.name }}</span> <span class="stats__number">{{ level.count }}</span></li>
+      {% endfor %}
+      <li class="stats__level"><span class="stats__level-name">{{ texts.unspecified }}</span> <span class="stats__number">{{ view.unspecified }}</span></li>
+    </ul>
+  </section>
+  {% endif %}
+</article>
+{% endblock %}
