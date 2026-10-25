@@ -25,5 +25,12 @@ def test_another_secret_does_not_read_it() -> None:
     assert read_ticket(ticket, NOW, "other-" + SECRET) is None
 
 
+def test_a_non_ascii_signature_is_a_forgery_not_an_error() -> None:
+    payload = make_ticket("a@example.com", NOW, SECRET).partition(".")[0]
+
+    assert read_ticket(f"{payload}.é", NOW, SECRET) is None
+    assert read_ticket("abc.é", NOW, SECRET) is None
+
+
 def test_the_unsubscribe_token_is_not_a_ticket() -> None:
     assert read_ticket("0" * 32 + "." + "A" * 43, NOW, SECRET) is None

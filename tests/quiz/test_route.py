@@ -124,6 +124,16 @@ def test_a_forged_ticket_is_refused_and_writes_nothing(site: Site, ticket: str) 
     assert site.store.writes == []
 
 
+def test_a_ticket_with_a_non_ascii_signature_is_refused_not_a_server_error(site: Site) -> None:
+    payload = site.ticket(EMAIL).partition(".")[0]
+
+    response = post(site, ALL_TWO, ticket=f"{payload}.é")
+
+    assert response.status_code == 422
+    assert parse(response.text).find("p", class_="quiz__error").text() == EXPIRED
+    assert site.store.writes == []
+
+
 def test_a_ticket_cannot_be_turned_to_another_address(site: Site) -> None:
     site.store.known.add("other@example.com")
     payload, _, signature = site.ticket(EMAIL).partition(".")

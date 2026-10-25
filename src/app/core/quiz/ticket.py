@@ -48,7 +48,7 @@ def read_ticket(ticket: str, now: datetime, secret: str) -> str | None:
     True
     """
     payload, dot, signature = ticket.partition(".")
-    if not dot or not payload.isascii() or not hmac.compare_digest(
+    if not dot or not payload.isascii() or not signature.isascii() or not hmac.compare_digest(
         signature, _signature(payload, secret)
     ):
         return None
