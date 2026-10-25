@@ -1,0 +1,25 @@
+{#-
+  The referral link of the feature Ф1 on the success screen (docs/requirements.md, sections 4 and
+  12): the personal link with the button «Скопіювати» and the number of people who registered by
+  it — a number only, never their addresses or names. The block belongs to the address of the
+  screen; where the slice is not installed, or the link cannot be made, nothing is rendered.
+  The button copies through an inline handler: the success screen carries no script tags (the
+  htmx swap and the registration tests), and without JavaScript the field is still selectable.
+  Texts: docs/copy.md 12.1, verbatim.
+-#}
+{%- if referral is defined and registration_state is defined and registration_state and registration_state.email -%}
+{%- set mine = referral.block_for(registration_state.email) -%}
+{%- if mine -%}
+<div class="referral" id="referral">
+  <h3 class="referral__title">{{ referral.texts.title }}</h3>
+  <p class="referral__intro">{{ referral.texts.intro }}</p>
+  <label class="referral__label" for="referral-link">{{ referral.texts.label }}</label>
+  <div class="referral__row">
+    <input class="referral__link" id="referral-link" type="text" readonly value="{{ mine.link }}">
+    <button class="btn referral__copy" type="button" data-copied="{{ referral.texts.copied }}"
+            onclick="const f=document.getElementById('referral-link'),b=this;f.select();(navigator.clipboard?navigator.clipboard.writeText(f.value):Promise.reject()).then(()=>{const t=b.textContent;b.textContent=b.dataset.copied;setTimeout(()=>{b.textContent=t},2000)},()=>{document.execCommand('copy')})">{{ referral.texts.copy }}</button>
+  </div>
+  <p class="referral__count">{{ mine.count_line }}</p>
+</div>
+{%- endif -%}
+{%- endif -%}

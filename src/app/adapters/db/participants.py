@@ -13,6 +13,7 @@ from datetime import datetime
 from sqlalchemy import ColumnElement, Engine, case, delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import aliased
+from sqlalchemy.sql.selectable import ScalarSelect
 
 from app.adapters.db.models import Participant as ParticipantRow
 from app.adapters.db.transaction import transaction
@@ -36,6 +37,13 @@ def _participant(row: ParticipantRow) -> Participant:
         ref_code=row.ref_code,
         referred_by=row.referred_by,
     )
+
+
+def _inviter(code: str | None) -> ScalarSelect[int] | None:
+    """The id of the participant with ``code``, resolved by the INSERT itself; unknown: NULL."""
+    if code is None:
+        return None
+    return select(ParticipantRow.id).where(ParticipantRow.ref_code == code).scalar_subquery()
 
 
 class SqlParticipantStore:
@@ -66,6 +74,7 @@ class SqlParticipantStore:
                 referrer=source.referrer,
                 ga_client_id=participant.ga_client_id,
                 origin=participant.origin,
+                referred_by=_inviter(participant.referrer_code),
             )
             # The existing row comes back unchanged and locked until the end of the statement's
             # transaction. A column outside unique indexes keeps the lock FOR NO KEY UPDATE.

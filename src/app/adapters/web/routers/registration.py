@@ -43,6 +43,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 CONSENT_VALUE = "yes"  # the value of the consent checkbox in the form
+REFERRAL_COOKIE = "ref"  # the code of an inviter's link (feature Ф1), set by the link's visit
 FORM = "_form.html"
 SCREEN = "_success.html"
 _STATUS = {Problem.TOO_MANY_ATTEMPTS: 429, Problem.SERVICE_UNAVAILABLE: 503}
@@ -101,6 +102,7 @@ def register(
             client_ip=client_ip(request),
             source=decode_source(request.cookies.get(SOURCE_COOKIE)),
             ga_client_id=clean_ga_client_id(ga_client_id),
+            referrer_code=request.cookies.get(REFERRAL_COOKIE),
         )
     )
     if isinstance(outcome, Registered):
