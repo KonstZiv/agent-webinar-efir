@@ -78,6 +78,9 @@ class NewParticipant:
     source: TrafficSource = field(default_factory=TrafficSource)
     ga_client_id: str | None = None
     origin: str | None = ORIGIN_V2
+    # ``ref_code`` of the inviter (feature Ф1); the store resolves it when it creates the row,
+    # and an unknown code leaves ``referred_by`` empty.
+    referrer_code: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 CONSENT_VERSION = "consent-v1"  # docs/legal/consent.md
 GA_CLIENT_ID_LENGTH = 100
 _GA_CLIENT_ID = re.compile(r"\d+\.\d+", re.ASCII)
+_REFERRER_CODE = re.compile(r"[A-Za-z0-9_-]{1,16}", re.ASCII)
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +72,7 @@ class RegistrationRequest:
     client_ip: str
     source: TrafficSource = field(default_factory=TrafficSource)
     ga_client_id: str | None = None
+    referrer_code: str | None = None  # the cookie ``ref``, as the browser sent it
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,6 +103,19 @@ def clean_ga_client_id(value: str) -> str | None:
     """
     value = value.strip()
     if len(value) > GA_CLIENT_ID_LENGTH or not _GA_CLIENT_ID.fullmatch(value):
+        return None
+    return value
+
+
+def clean_referrer_code(value: str | None) -> str | None:
+    """The code of an inviter's link (``ref_code`` is ``varchar(16)``), otherwise ``None``.
+
+    >>> clean_referrer_code("Ab3_-xYz")
+    'Ab3_-xYz'
+    >>> clean_referrer_code("a b") is None and clean_referrer_code("x" * 17) is None
+    True
+    """
+    if value is None or not _REFERRER_CODE.fullmatch(value):
         return None
     return value
 
@@ -182,6 +197,7 @@ class Registration:
             consent_at=now,
             source=request.source,
             ga_client_id=request.ga_client_id,
+            referrer_code=clean_referrer_code(request.referrer_code),
         )
         try:
             stored, created = self._participants.add_if_absent(participant)
