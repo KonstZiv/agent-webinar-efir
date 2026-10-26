@@ -473,6 +473,7 @@
 | фундамент | будь-які файли шаблону; у `docs/contract.md` — позначку `UNSUBSCRIBE_SECRET` у розділі 2; у `tests/test_contract.py` — правило префікса маскування (контракт, розділ 10); тести шаблону, які описують службову сторінку `/`, порожню модель і стилі |
 | реєстрація і лист | у `docs/contract.md` — позначки «ні» → «так» у таблиці розділу 3 для своїх маршрутів і позначку cookie в розділі 5; у `src/app/adapters/web/static/js/consent.js` — подію `generate_lead`, позначку `webinar_lead` і заповнення прихованого поля ідентифікатора браузера GA4 (контракт, розділи 5 і 10) |
 | `cp-release` | у `docs/contract.md` — рядок «Етап» |
+| `course` (сторінка `/course` для рекламного трафіку; підстава — issue #14, постановка оператора) | у `src/app/adapters/web/templates/_form.html` — змінну `form_texts` (тексти форми сторінки курсу) і приховане поле `page`; у `src/app/adapters/web/routers/registration.py` — читання `page` за білим списком і контекст сторінки за ключем `course.page` (без імпорту зрізу); у `src/app/adapters/content/copy.py` — читання розділу 13 `docs/copy.md` і підстановки `{lesson_*}`; у `tests/copy_oracle.py` і `tests/test_copy_oracle.py` — перевірки розділу 13; у `docs/copy.md` — розділ 13 і рядки розділу 11; у `docs/course.md` — розділ 3 |
 
 **Що дає фундамент, щоб зрізам не доводилося змінювати спільні файли:**
 
