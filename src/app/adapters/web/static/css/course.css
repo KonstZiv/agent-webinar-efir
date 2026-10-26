@@ -1,0 +1,9 @@
+/* Сторінка курсу /course (course.html): розмітка і стилі — з landing.css; тут лише посилання під блоками. */
+
+.course-record {
+  max-width: calc(var(--landing-width) + 32px);
+  margin: 0 auto;
+  padding: 0 16px 56px;
+  font-size: 16px;
+  line-height: 1.6;
+}
