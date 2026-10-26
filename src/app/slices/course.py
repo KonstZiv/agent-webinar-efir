@@ -9,7 +9,7 @@ the letter and the counters are not touched: the page uses the form of the slice
 from pathlib import Path
 
 from app.adapters.content.copy import load_course_texts
-from app.adapters.web.routers.course import COURSE_TEXTS
+from app.adapters.web.routers.course import COURSE_PAGE, COURSE_TEXTS, page_context
 from app.slices import SliceSetup
 
 # Texts live in the repository's docs/; the working directory is the repository (as in main.py).
@@ -19,3 +19,4 @@ DOCS_DIR = Path("docs")
 def install(setup: SliceSetup) -> None:
     texts = load_course_texts(DOCS_DIR, lesson_start=setup.settings.lesson_start)
     setup.provide(COURSE_TEXTS, lambda: texts)
+    setup.provide(COURSE_PAGE, lambda: lambda container: page_context(container, texts))

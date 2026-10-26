@@ -54,6 +54,9 @@
       <div class="cf-turnstile" data-sitekey="{{ registration.turnstile_site_key }}" data-language="uk" data-theme="light"></div>
     </div>
     <input type="hidden" name="ga_client_id" value="">
+    {%- if form_texts is defined and form_texts %}
+    <input type="hidden" name="page" value="course">
+    {%- endif %}
     {%- if "human_check_failed" in problems %}
     <p class="form-error" role="alert" tabindex="-1">Не вдалося підтвердити, що форму заповнює людина. Спробуйте ще раз.</p>
     {%- elif "too_many_attempts" in problems %}

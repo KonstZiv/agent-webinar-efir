@@ -44,6 +44,12 @@ class Site:
             "/register", data=VALID, headers={"HX-Request": "true"} if htmx else {}
         )
 
+    def refuse(self, *, htmx: bool = True, **form: str) -> httpx.Response:
+        """``POST /register`` with an empty email (a validation problem) and the extra ``form``."""
+        data = {**VALID, "email": "", **form}
+        headers = {"HX-Request": "true"} if htmx else {}
+        return self.client.post("/register", data=data, headers=headers)
+
     def participants(self) -> list[Participant]:
         with Session(self.engine) as session:
             return list(session.scalars(select(Participant).order_by(Participant.id)))

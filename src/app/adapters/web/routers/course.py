@@ -9,30 +9,32 @@ The registration, the invitation, the source (``utm``) and the analytics events 
 - ``site_mode`` — the current mode, for the form and the success screen.
 
 ``blocks`` (1.6, 1.7) are added by the foundation. The texts are read by the slice ``course``
-and given by the key ``COURSE_TEXTS``.
+and given by the key ``COURSE_TEXTS``. The same context, for a container, is given by the key
+``COURSE_PAGE``: ``POST /register`` shows the page again with the problems of its form.
 """
+
+from collections.abc import Callable
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
 from app.adapters.content.copy import CourseTexts
-from app.adapters.web.dependencies import ContainerDep, service
+from app.adapters.web.dependencies import Container, ContainerDep, service
 from app.adapters.web.page_meta import CANONICAL_URL, OG_IMAGE_PATH, PageMeta, script_json
 from app.services import Key
 
 router = APIRouter()
 
+type PageContext = Callable[[Container], dict[str, object]]
+
 COURSE_TEXTS = Key[CourseTexts]("course.texts")
+COURSE_PAGE = Key[PageContext]("course.page")
 PATH = "/course"
 TEMPLATE = "course.html"
 
 
-@router.get(PATH, response_class=HTMLResponse)
-def course(
-    request: Request,
-    container: ContainerDep,
-    texts: CourseTexts = Depends(service(COURSE_TEXTS)),  # noqa: B008
-) -> HTMLResponse:
+def page_context(container: Container, texts: CourseTexts) -> dict[str, object]:
+    """The template context of the page, without the request."""
     page_texts = container.page_texts
     url = f"{CANONICAL_URL.rstrip('/')}{PATH}"
     page_meta = PageMeta(
@@ -55,13 +57,18 @@ def course(
         canonical=url,
         og_url=url,
     )
-    return container.templates.TemplateResponse(
-        request,
-        TEMPLATE,
-        {
-            "page": texts,
-            "form_texts": {"title": texts.form_title, "intro": texts.form_intro},
-            "page_meta": page_meta,
-            "site_mode": container.settings.site_mode,
-        },
-    )
+    return {
+        "page": texts,
+        "form_texts": {"title": texts.form_title, "intro": texts.form_intro},
+        "page_meta": page_meta,
+        "site_mode": container.settings.site_mode,
+    }
+
+
+@router.get(PATH, response_class=HTMLResponse)
+def course(
+    request: Request,
+    container: ContainerDep,
+    texts: CourseTexts = Depends(service(COURSE_TEXTS)),  # noqa: B008
+) -> HTMLResponse:
+    return container.templates.TemplateResponse(request, TEMPLATE, page_context(container, texts))

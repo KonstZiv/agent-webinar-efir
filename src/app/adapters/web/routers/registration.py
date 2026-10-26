@@ -13,6 +13,7 @@ no button when the link cannot be stored.
 """
 
 import logging
+from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, Request
@@ -23,7 +24,7 @@ from app.adapters.registration.mail import MailWorkers
 from app.adapters.registration.source import SOURCE_COOKIE, decode_source
 from app.adapters.registration.view import RegistrationState
 from app.adapters.web.client_ip import client_ip
-from app.adapters.web.dependencies import ContainerDep, service
+from app.adapters.web.dependencies import Container, ContainerDep, service
 from app.adapters.web.routers.home import FALLBACK, LANDING, has_template
 from app.core.entities import Participant
 from app.core.ports import StorageConflict, StorageError, StorageUnavailable
@@ -37,6 +38,7 @@ from app.core.registration.registration import (
     RegistrationRequest,
     clean_ga_client_id,
 )
+from app.services import Key
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,10 @@ router = APIRouter()
 
 CONSENT_VALUE = "yes"  # the value of the consent checkbox in the form
 REFERRAL_COOKIE = "ref"  # the code of an inviter's link (feature Ф1), set by the link's visit
+PAGES = frozenset({"course"})  # the values of the hidden field ``page``: the page of the form
+# The slice «course» gives the context of its page by this key; named here, not imported.
+COURSE_PAGE = Key[Callable[[Container], dict[str, object]]]("course.page")
+COURSE_TEMPLATE = "course.html"
 FORM = "_form.html"
 SCREEN = "_success.html"
 _STATUS = {Problem.TOO_MANY_ATTEMPTS: 429, Problem.SERVICE_UNAVAILABLE: 503}
@@ -92,6 +98,7 @@ def register(
     consent: Annotated[str, Form()] = "",
     turnstile_token: Annotated[str, Form(alias="cf-turnstile-response")] = "",
     ga_client_id: Annotated[str, Form()] = "",
+    page: Annotated[str, Form()] = "",
 ) -> HTMLResponse:
     given_consent = consent == CONSENT_VALUE
     outcome = registration.register(
@@ -124,9 +131,15 @@ def register(
 
     mode = container.settings.site_mode
     context: dict[str, object] = {"site_mode": mode, "registration_state": state}
+    course_page = container.services.find(COURSE_PAGE) if page in PAGES else None
     if request.headers.get("HX-Request") == "true":
         template = SCREEN if state.screen else FORM
         context["form_fragment"] = True  # the page has the scripts of the form already
+        if course_page is not None:
+            context["form_texts"] = course_page(container)["form_texts"]
+    elif course_page is not None:
+        template = COURSE_TEMPLATE
+        context |= course_page(container)
     else:
         template = LANDING if has_template(container.templates, LANDING) else FALLBACK
         context |= {
