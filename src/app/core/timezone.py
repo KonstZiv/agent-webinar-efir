@@ -1,10 +1,10 @@
 """Kyiv time: event times are local ``Europe/Kyiv`` wall times, never a fixed UTC offset.
 
-Daylight saving time ends on 25.10.2026, so the webinar (21.10) and the first lesson (26.10)
+Daylight saving time ends on 25.10.2026, so the webinar (21.10) and the first lesson (28.10)
 have different offsets; the zone, not a constant, gives the right one.
 
 >>> from datetime import datetime
->>> kyiv_offset(datetime(2026, 10, 21, 19, 0)), kyiv_offset(datetime(2026, 10, 26, 19, 0))
+>>> kyiv_offset(datetime(2026, 10, 21, 19, 0)), kyiv_offset(datetime(2026, 10, 28, 19, 0))
 ('+03:00', '+02:00')
 """
 

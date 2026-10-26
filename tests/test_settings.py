@@ -245,7 +245,7 @@ def test_normal_operation_reads_the_required_variables(make_settings: SettingsFa
     assert settings.site_mode == "live"
     assert settings.public_base_url == "https://public-sentinel.example.com"
     assert settings.event_start == datetime(2026, 10, 21, 19, 0)
-    assert settings.lesson_end == datetime(2026, 10, 26, 21, 0)
+    assert settings.lesson_end == datetime(2026, 10, 28, 21, 0)
     assert settings.course_url == "https://course-sentinel.example.com/course"
     assert settings.sender_email == "sender-sentinel@example.com"
     assert settings.admin_token is not None

@@ -16,7 +16,7 @@ from app.core.entities import OutgoingEmail
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 SENDER_NAME = "Костянтин Зівенко"
-SUBJECT = "Запрошення на перше заняття курсу — 26 жовтня, 19:00 за Києвом"
+SUBJECT = "Запрошення на перше заняття курсу — 28 жовтня, 19:00 за Києвом"
 PREHEADER = "Перехід на заняття, подія для календаря та інструкція «Зроби сам»."
 
 

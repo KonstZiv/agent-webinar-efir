@@ -238,10 +238,10 @@ def table(text: str) -> dict[str, str]:
 
 
 def kyiv_moment(value: str) -> datetime:
-    """A moment written as ``26.10.2026, 19:00, пояс Europe/Kyiv`` (copy.md, section 4).
+    """A moment written as ``28.10.2026, 19:00, пояс Europe/Kyiv`` (copy.md, section 4).
 
-    >>> kyiv_moment("26.10.2026, 19:00, пояс Europe/Kyiv").isoformat()
-    '2026-10-26T19:00:00+02:00'
+    >>> kyiv_moment("28.10.2026, 19:00, пояс Europe/Kyiv").isoformat()
+    '2026-10-28T19:00:00+02:00'
     """
     match = _KYIV_MOMENT.fullmatch(plain(value))
     assert match is not None, f"not a moment: {value!r}"

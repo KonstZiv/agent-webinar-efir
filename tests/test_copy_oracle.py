@@ -374,7 +374,8 @@ def test_the_date_follows_the_settings(make_settings: SettingsFactory, mode: str
     assert (event["startDate"], event["endDate"]) == (fields["startDate"], fields["endDate"])
     assert event["startDate"] == "2026-11-03T18:30+02:00"
     assert "21 жовтня" not in response.text
-    assert "Середа" not in response.text
+    # The first lesson is on a Wednesday too (copy.md, 1.7): only its date may keep the weekday.
+    assert "Середа" not in response.text.replace("Середа, 28.10.2026", "")
 
 
 @pytest.mark.parametrize(
