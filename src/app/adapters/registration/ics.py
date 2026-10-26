@@ -7,7 +7,7 @@ UTC offset anywhere in the file, since daylight saving time ends between the two
 webinar keeps v1's ``UID``, so a calendar that already has it updates the event instead of adding
 a second one (docs/contract.md, section 6). A calendar takes the update only with a ``SEQUENCE``
 not lower than the one it has: after the move to 21.10 v1 gives ``SEQUENCE:1``, so the webinar
-has 1; the lesson exists in v2 only and has none.
+has 1; the lesson exists in v2 only and, moved from 26.10 to 28.10, has 1 too.
 """
 
 from dataclasses import dataclass
@@ -23,6 +23,9 @@ LESSON_UID = "lesson-2026-10-26@pythoncourse.me"
 # v1 gives SEQUENCE:1 with the start of 21.10 since the move; raise it with each later change
 # of the webinar's time or description.
 WEBINAR_SEQUENCE = 1
+# The lesson of 26.10 had none (0); it moved to 28.10 under the same UID. Raise it with each
+# later change of the lesson's time or description.
+LESSON_SEQUENCE = 1
 WEBINAR_SUMMARY = (
     "Відкритий вебінар «Архітектор замість кодера: як працює агентна розробка на Python»"
 )
@@ -65,7 +68,7 @@ def webinar_event(*, start: datetime, end: datetime, public_base_url: str) -> Ca
 
 
 def lesson_event(*, start: datetime, end: datetime, public_base_url: str) -> CalendarEvent:
-    """The first lesson of 26.10 (docs/copy.md, section 4), for the invitation."""
+    """The first lesson of 28.10 (docs/copy.md, section 4), for the invitation."""
     lesson_url = f"{public_base_url}/go/lesson"
     return CalendarEvent(
         uid=LESSON_UID,
@@ -74,6 +77,7 @@ def lesson_event(*, start: datetime, end: datetime, public_base_url: str) -> Cal
         location=lesson_url,
         start=start,
         end=end,
+        sequence=LESSON_SEQUENCE,
     )
 
 

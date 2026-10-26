@@ -1,11 +1,12 @@
 """Calendar files: ``/calendar.ics`` (the webinar, v1's UID) and ``/calendar/lesson.ics``.
 
 Times are Kyiv wall time with ``TZID=Europe/Kyiv`` and a ``VTIMEZONE`` block from zoneinfo, no
-fixed UTC offset: 21.10 is UTC+3, 26.10 already UTC+2 (requirements, section 6); the block has
+fixed UTC offset: 21.10 is UTC+3, 28.10 already UTC+2 (requirements, section 6); the block has
 winter time from 25.10.2026, 04:00 summer time. Texts come from docs/copy.md, sections 4 and 5
 (the webinar's times put in from ``EVENT_START`` and ``EVENT_END``); addresses are built from
 ``PUBLIC_BASE_URL``. The webinar keeps v1's ``UID`` with ``SEQUENCE`` 1 or more: after the move
-to 21.10 v1 gives ``SEQUENCE:1`` (docs/contract.md, section 6).
+to 21.10 v1 gives ``SEQUENCE:1`` (docs/contract.md, section 6). The lesson keeps its ``UID`` too:
+moved from 26.10 to 28.10, it has ``SEQUENCE:1``.
 """
 
 from datetime import UTC, date, datetime, timedelta
@@ -34,9 +35,9 @@ EVENTS = {
     "/calendar/lesson.ics": {
         "copy": copy.table(copy.section("4")),
         "uid": "lesson-2026-10-26@pythoncourse.me",
-        "start": "DTSTART;TZID=Europe/Kyiv:20261026T190000",
-        "end": "DTEND;TZID=Europe/Kyiv:20261026T210000",
-        "utc_start": datetime(2026, 10, 26, 17, 0, tzinfo=UTC),
+        "start": "DTSTART;TZID=Europe/Kyiv:20261028T190000",
+        "end": "DTEND;TZID=Europe/Kyiv:20261028T210000",
+        "utc_start": datetime(2026, 10, 28, 17, 0, tzinfo=UTC),
         "location": f"{PUBLIC}/go/lesson",
     },
 }
@@ -62,7 +63,7 @@ def public(value: str) -> str:
 
 def moment(value: str) -> datetime:
     """A moment of copy.md: the webinar's is put in from the settings (ISO with the offset),
-    the lesson's is written out (``26.10.2026, 19:00, пояс Europe/Kyiv``)."""
+    the lesson's is written out (``28.10.2026, 19:00, пояс Europe/Kyiv``)."""
     try:
         return datetime.fromisoformat(value)
     except ValueError:
@@ -169,12 +170,20 @@ def test_uid_is_constant_and_method_is_publish(client_factory: ClientFactory, pa
 
 def test_the_webinar_event_supersedes_v1s(client_factory: ClientFactory) -> None:
     """After the move v1 gives ``SEQUENCE:1``: a calendar takes the event of v2 for the same
-    ``UID`` only with a ``SEQUENCE`` not lower. The lesson is v2's alone and keeps none."""
+    ``UID`` only with a ``SEQUENCE`` not lower."""
     webinar = event_of(fetch(client_factory, "/calendar.ics"))
-    lesson = event_of(fetch(client_factory, "/calendar/lesson.ics"))
 
     assert int(webinar.decoded("SEQUENCE")) >= 1
-    assert "SEQUENCE" not in lesson
+
+
+def test_the_moved_lesson_supersedes_the_one_of_26_10(client_factory: ClientFactory) -> None:
+    """The lesson of 26.10 had no ``SEQUENCE`` (0); moved to 28.10 under the same ``UID`` it
+    has ``SEQUENCE:1``, so a calendar that added the old event takes the new date."""
+    response = fetch(client_factory, "/calendar/lesson.ics")
+    event = event_of(response)
+
+    assert "SEQUENCE:1" in response.text.split("\r\n")
+    assert str(event["UID"]) == "lesson-2026-10-26@pythoncourse.me"
 
 
 @pytest.mark.parametrize(
@@ -188,9 +197,9 @@ def test_the_webinar_event_supersedes_v1s(client_factory: ClientFactory) -> None
         ),
         (
             "/calendar/lesson.ics",
-            {"LESSON_START": "2026-10-26T18:00", "LESSON_END": "2026-10-26T20:30"},
-            "DTSTART;TZID=Europe/Kyiv:20261026T180000",
-            "DTEND;TZID=Europe/Kyiv:20261026T203000",
+            {"LESSON_START": "2026-10-28T18:00", "LESSON_END": "2026-10-28T20:30"},
+            "DTSTART;TZID=Europe/Kyiv:20261028T180000",
+            "DTEND;TZID=Europe/Kyiv:20261028T203000",
         ),
     ],
 )
