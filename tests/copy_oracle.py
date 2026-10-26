@@ -123,6 +123,27 @@ def event_values(start: datetime, end: datetime) -> dict[str, str]:
     }
 
 
+def lesson_values(start: datetime) -> dict[str, str]:
+    """The values ``{lesson_…}`` of copy.md, section 11, for a naive Kyiv wall time.
+
+    >>> lesson_values(datetime(2026, 10, 28, 19, 0))
+    {'lesson_weekday': 'середа', 'lesson_date': '28 жовтня 2026 року', 'lesson_start': '19:00'}
+    """
+    return {
+        "lesson_weekday": WEEKDAYS[start.weekday()],
+        "lesson_date": f"{start.day} {MONTHS[start.month - 1]} {start.year} року",
+        "lesson_start": f"{start:%H:%M}",
+    }
+
+
+def course_text(lesson_start: datetime) -> str:
+    """docs/copy.md with the values of the webinar and of the nearest lesson put in."""
+    text = copy_text()
+    for name, value in lesson_values(lesson_start).items():
+        text = text.replace(f"{{{name}}}", value)
+    return text
+
+
 def fill(text: str, start: datetime, end: datetime) -> str:
     """``text`` with the values of the webinar's date put in; an unknown ``{event_…}`` fails.
 

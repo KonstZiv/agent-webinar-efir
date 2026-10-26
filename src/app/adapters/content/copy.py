@@ -7,6 +7,8 @@
   render of a page gets them for the mode and the day as ``blocks`` (CLAUDE.md, «Маршрут /»);
 - section 10 — the service tags of ``/`` by mode, the shared ones, the event markup and the
   titles of service pages (requirements, section 13);
+- section 13 — the page of the course ``/course`` (``load_course_texts``): its own texts and
+  service tags; the values ``{lesson_…}`` come from ``LESSON_START`` the same way;
 - docs/materials.md — the materials page, whole.
 
 Texts are taken verbatim; a missing section, group or label stops the application, as a
@@ -20,14 +22,14 @@ difference.
 
 import re
 from dataclasses import dataclass, fields, replace
-from datetime import date
+from datetime import date, datetime
 from itertools import pairwise
 from pathlib import Path
 
 from markupsafe import Markup
 
 from app.adapters.content.legal import ContentError, render_document, render_inline
-from app.core.event_values import PREFIX, EventValues
+from app.core.event_values import PREFIX, EventValues, event_values
 from app.settings import SiteMode
 
 COPY_FILE = "copy.md"
@@ -68,6 +70,18 @@ _ALWAYS_VISIBLE = re.compile(r"([^.]*)видно завжди")
 _QUOTED = re.compile(r"«([^»]+)»")
 _VALUE = re.compile(r"\{([^{}\s]+)\}")  # a value the site puts in: «{event_date}»
 EVENT_VALUE_NAMES = frozenset(f"{PREFIX}{field.name}" for field in fields(EventValues))
+LESSON_VALUE_NAMES = frozenset({"lesson_weekday", "lesson_date", "lesson_start"})  # section 13 only
+COURSE_SECTION_NUMBER = "13"
+COURSE_FIRST_SCREEN = "13.1"
+COURSE_FORM = "13.2"
+COURSE_HOW = "13.3"
+COURSE_JOIN = "13.4"
+COURSE_AUDIENCE = "13.5"
+COURSE_RECORD = "13.6"
+COURSE_SERVICE = "13.7"
+NOTE_UNDER_LIST = "Примітка під списком"
+LINK_LABEL = "Посилання"
+_LINK_URL = re.compile(r"`([^`]+)`")
 
 
 @dataclass(frozen=True, slots=True)
@@ -208,6 +222,59 @@ class LandingTexts:
 
 
 @dataclass(frozen=True, slots=True)
+class CourseHero:
+    """13.1 the first screen of ``/course``; ``when`` is ``None`` without ``LESSON_START``."""
+
+    eyebrow: str
+    title: str
+    subtitle: str
+    when: str | None
+    host: str
+    button: str
+    note: str
+
+
+@dataclass(frozen=True, slots=True)
+class CourseList:
+    """13.3 «Як проходить курс» and 13.5 «Для кого» (with its note): a title and a list."""
+
+    title: Markup
+    items: tuple[Markup, ...]
+    note: Markup | None
+
+
+@dataclass(frozen=True, slots=True)
+class CourseLink:
+    """A text that leads to ``url``."""
+
+    text: Markup
+    url: str
+
+
+@dataclass(frozen=True, slots=True)
+class CourseJoin:
+    """13.4 «Як приєднатися»: the title, the text and the link to the CBS page."""
+
+    title: Markup
+    text: Markup
+    link: CourseLink
+
+
+@dataclass(frozen=True, slots=True)
+class CourseTexts:
+    """Section 13 of copy.md: every text of ``/course`` except blocks 1.6 and 1.7."""
+
+    hero: CourseHero
+    form_title: Markup
+    form_intro: Markup
+    how: CourseList
+    join: CourseJoin
+    audience: CourseList
+    record: CourseLink
+    service: ServiceTexts
+
+
+@dataclass(frozen=True, slots=True)
 class PageTexts:
     first_screen: dict[SiteMode, FirstScreen]
     landing: dict[SiteMode, LandingTexts]
@@ -253,24 +320,39 @@ def _read(path: Path) -> str:
         raise ContentError(f"Page text cannot be read: {path} ({type(error).__name__})") from None
 
 
-def _fill(lines: list[str], event: EventValues | None, number: str) -> list[str]:
+def _fill(
+    lines: list[str],
+    event: EventValues | None,
+    number: str,
+    lesson: dict[str, str] | None = None,
+) -> list[str]:
     """``lines`` with the values of the webinar's date put in; an unknown value stops the app.
 
     Without ``event`` (the redirect stub: no ``EVENT_*``, no page rendered) the values the
-    foundation knows stay as written.
+    foundation knows stay as written. The values ``{lesson_…}`` are known in section 13 only;
+    without ``lesson`` (no ``LESSON_START``) they stay as written.
     """
     values = event.placeholders() if event is not None else {}
+    known = EVENT_VALUE_NAMES
+    if number.split(".")[0] == COURSE_SECTION_NUMBER:
+        values = values | (lesson or {})
+        known = known | LESSON_VALUE_NAMES
 
     def value(match: re.Match[str]) -> str:
         name = match.group(1)
-        if name not in EVENT_VALUE_NAMES:
+        if name not in known:
             raise ContentError(f"{COPY_FILE}: unknown value «{match.group(0)}» in section {number}")
         return values.get(name, match.group(0))
 
     return [_VALUE.sub(value, line) for line in lines]
 
 
-def _section(lines: list[str], number: str, event: EventValues | None) -> list[str]:
+def _section(
+    lines: list[str],
+    number: str,
+    event: EventValues | None,
+    lesson: dict[str, str] | None = None,
+) -> list[str]:
     """Lines of section ``number`` (``1.1``, ``10``) up to the next heading of its level,
     with the values of the webinar's date put in: every section is read through here."""
     for index, line in enumerate(lines):
@@ -285,7 +367,7 @@ def _section(lines: list[str], number: str, event: EventValues | None) -> list[s
                 ),
                 len(lines),
             )
-            return _fill(lines[index + 1 : end], event, number)
+            return _fill(lines[index + 1 : end], event, number, lesson)
     raise ContentError(f"{COPY_FILE}: section {number} not found")
 
 
@@ -501,6 +583,70 @@ def _cell(table: dict[str, str], key: str, where: str) -> str:
     if not value:
         raise ContentError(f"{COPY_FILE}: «{key}» not found in {where}")
     return value
+
+
+def _link(value: str, where: str) -> CourseLink:
+    """``text → `address```: the words before the arrow lead to the address after it."""
+    text, arrow, rest = value.partition(" → ")
+    found = _LINK_URL.search(rest)
+    if not arrow or found is None:
+        raise ContentError(f"{COPY_FILE}: «text → `address`» expected in {where}")
+    return CourseLink(text=render_inline(text), url=found.group(1))
+
+
+def _course_list(lines: list[str], where: str, *, note: bool) -> CourseList:
+    return CourseList(
+        title=_inline(lines, TITLE, where),
+        items=_items(lines, where),
+        note=_inline(lines, NOTE_UNDER_LIST, where) if note else None,
+    )
+
+
+def load_course_texts(docs_dir: Path, *, lesson_start: datetime | None) -> CourseTexts:
+    """Read section 13 of copy.md, the texts of ``/course``.
+
+    ``lesson_start`` — ``LESSON_START`` (naive Kyiv wall time): it fills the values
+    ``{lesson_…}``; without it the line «Коли» is not shown.
+    """
+    lesson = None
+    if lesson_start is not None:
+        values = event_values(lesson_start, lesson_start)
+        lesson = {
+            "lesson_weekday": values.weekday,
+            "lesson_date": values.date,
+            "lesson_start": values.start,
+        }
+    lines = _read(docs_dir / COPY_FILE).splitlines()
+
+    def part(number: str) -> list[str]:
+        return _section(lines, number, None, lesson)
+
+    first = part(COURSE_FIRST_SCREEN)
+    texts = {
+        name: _labelled(first, label, COURSE_FIRST_SCREEN)
+        for name, label in FIRST_SCREEN_LABELS.items()
+        if name != "when"
+    }
+    when = _labelled(first, FIRST_SCREEN_LABELS["when"], COURSE_FIRST_SCREEN)
+    form = part(COURSE_FORM)
+    join = part(COURSE_JOIN)
+    service = _table(part(COURSE_SERVICE))
+    return CourseTexts(
+        hero=CourseHero(when=when if lesson is not None else None, **texts),
+        form_title=_inline(form, TITLE, COURSE_FORM),
+        form_intro=_inline(form, INTRO, COURSE_FORM),
+        how=_course_list(part(COURSE_HOW), COURSE_HOW, note=False),
+        join=CourseJoin(
+            title=_inline(join, TITLE, COURSE_JOIN),
+            text=_inline(join, TEXT, COURSE_JOIN),
+            link=_link(_labelled(join, LINK_LABEL, COURSE_JOIN), COURSE_JOIN),
+        ),
+        audience=_course_list(part(COURSE_AUDIENCE), COURSE_AUDIENCE, note=True),
+        record=_link(_labelled(part(COURSE_RECORD), TEXT, COURSE_RECORD), COURSE_RECORD),
+        service=ServiceTexts(
+            **{name: _cell(service, tag, COURSE_SERVICE) for name, tag in SERVICE_TAGS.items()}
+        ),
+    )
 
 
 def load_page_texts(docs_dir: Path, *, event: EventValues | None) -> PageTexts:

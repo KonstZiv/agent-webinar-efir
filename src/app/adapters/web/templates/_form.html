@@ -3,7 +3,8 @@
   12): section#register, which POST /register replaces with the form and its problems or with
   _success.html. Self-contained: it brings the Turnstile widget and script and its own script,
   which renders the widget (render=explicit, whichever script loads first); the page includes it
-  by name. Texts are verbatim from docs/copy.md 1.8 by mode; the consent from
+  by name. The optional ``form_texts`` (``title``, ``intro``) replace the title and the intro of
+  the mode (the page of the course). Texts are verbatim from docs/copy.md 1.8 by mode; the consent from
   docs/legal/consent.md. Renders nothing where the slice is not installed.
 -#}
 {%- if registration is defined -%}
@@ -15,7 +16,10 @@
 {%- set email_error = "email_empty" in problems or "email_invalid" in problems or "email_domain" in problems -%}
 {%- set consent_error = "consent_missing" in problems %}
 <section class="register" id="register">
-  {%- if site_mode == "replay" %}
+  {%- if form_texts is defined and form_texts %}
+  <h2 class="register__title">{{ form_texts.title }}</h2>
+  <p class="register__intro">{{ form_texts.intro }}</p>
+  {%- elif site_mode == "replay" %}
   <h2 class="register__title">Зареєструватися і дивитися запис</h2>
   <p class="register__intro">Після реєстрації відкриється запис ефіру. Ви також отримаєте запрошення на перше заняття курсу — середа, 28.10.2026, 19:00 за Києвом. Потрібна лише адреса електронної пошти.</p>
   {%- else %}

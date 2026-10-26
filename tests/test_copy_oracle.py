@@ -16,6 +16,7 @@ The date of the webinar comes from the settings only: the oracle puts its own fo
 import doctest
 import html
 import json
+import re
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
@@ -392,6 +393,138 @@ def test_no_value_reaches_a_page(
 
     assert response.status_code == 200
     assert [name for name in sorted(copy.value_names()) if f"{{{name}}}" in response.text] == []
+
+
+# --- /course: section 13 -------------------------------------------------------------------------
+
+LESSON_START = datetime.fromisoformat("2026-10-28T19:00")  # LESSON_START of the test application
+_ITEM = re.compile(r"^- (.+)$")  # an item of the lists 13.3 and 13.5 (their labels have no dash)
+COURSE_LISTS = ("13.3", "13.5")
+COURSE_LABELS = {
+    "13.1": (
+        "Надзаголовок",
+        "Заголовок",
+        "Підзаголовок",
+        "Коли",
+        "Ведучий",
+        "Кнопка",
+        "Під кнопкою",
+    ),
+    "13.2": ("Заголовок", "Вступ"),
+    "13.3": ("Заголовок",),
+    "13.4": ("Заголовок", "Текст"),
+    "13.5": ("Заголовок", "Примітка під списком"),
+}
+
+
+def course_units(text: str) -> list[str]:
+    """Every text of section 13 the page shows: labelled values, list items, link texts."""
+    units: list[str] = []
+    for number, labels in COURSE_LABELS.items():
+        body = copy.section(number, text)
+        units += [copy.one(body, label) for label in labels]
+        if number in COURSE_LISTS:
+            units += [
+                copy.plain(m.group(1)) for line in body.splitlines() if (m := _ITEM.match(line))
+            ]
+    units.append(copy.one(copy.section("13.4", text), "Посилання").split(" → ")[0])
+    units.append(copy.one(copy.section("13.6", text), "Текст").split(" → ")[0])
+    return units
+
+
+def course_page(
+    make_settings: SettingsFactory, mode: str, *, no_lesson: bool = False, **env: str
+) -> tuple[Node, str]:
+    """``/course``; ``no_lesson`` drops ``LESSON_START`` after loading (the settings require it)."""
+    settings = make_settings(**MODES[mode], **env)
+    if no_lesson:
+        settings = settings.model_copy(update={"lesson_start": None, "lesson_end": None})
+    app = create_app(
+        settings,
+        db_probe=FakeDatabaseProbe(),
+        overrides=fake_overrides(),
+    )
+    with TestClient(app) as client:
+        response = client.get("/course")
+    assert response.status_code == 200
+    return parse(response.text), response.text
+
+
+@pytest.mark.parametrize("mode", sorted(MODES))
+def test_course_page_has_the_texts_of_section_13(
+    make_settings: SettingsFactory, mode: str
+) -> None:
+    page, _ = course_page(make_settings, mode)
+    shown = page.find("main").text()
+    text = copy.course_text(LESSON_START)
+
+    assert [unit for unit in course_units(text) if unit not in shown] == []
+    assert copy.one(copy.section("13.1", text), "Коли") == (
+        "Найближче заняття — середа, 28 жовтня 2026 року, 19:00 за Києвом"
+    )
+
+
+@pytest.mark.parametrize("mode", sorted(MODES))
+def test_course_page_first_screen_and_form(make_settings: SettingsFactory, mode: str) -> None:
+    page, _ = course_page(make_settings, mode)
+    text = copy.course_text(LESSON_START)
+    form = page.find("section", id="register")
+
+    assert page.find("h1", id="landing-hero-title").text() == copy.one(
+        copy.section("13.1", text), "Заголовок"
+    )
+    assert copy.one(copy.section("13.1", text), "Кнопка") in [
+        link.text() for link in page.find("main").find_all("a", href="#register")
+    ]
+    assert copy.one(copy.section("13.2", text), "Заголовок") in form.text()
+    assert copy.one(copy.section("13.2", text), "Вступ") in form.text()
+
+
+def test_course_page_without_lesson_start(make_settings: SettingsFactory) -> None:
+    page, html_text = course_page(make_settings, "live", no_lesson=True)
+    shown = page.find("main").text()
+    text = copy.course_text(LESSON_START)
+
+    assert "Найближче заняття" not in shown
+    assert "{lesson_" not in html_text
+    assert copy.one(copy.section("13.1", text), "Заголовок") in shown
+    when = copy.one(copy.section("13.1", text), "Коли")
+    assert [unit for unit in course_units(text) if unit not in shown] == [when]
+
+
+def test_course_page_follows_lesson_start(make_settings: SettingsFactory) -> None:
+    page, _ = course_page(
+        make_settings, "live", LESSON_START="2026-11-02T19:00", LESSON_END="2026-11-02T21:00"
+    )
+
+    assert "Найближче заняття — понеділок, 2 листопада 2026 року, 19:00 за Києвом" in (
+        page.find("main").text()
+    )
+
+
+@pytest.mark.parametrize("mode", sorted(MODES))
+def test_course_page_service_tags(make_settings: SettingsFactory, mode: str) -> None:
+    page, html_text = course_page(make_settings, mode)
+    tags = copy.table(copy.section("13.7"))
+    shared = copy.table(copy.group(copy.section("10"), "Спільне"))
+
+    assert normalize(page.find("title").text_raw()) == tags["title"]
+    assert content(page, name="description") == tags["description"]
+    assert content(page, property="og:title") == tags["og:title"]
+    assert content(page, property="og:description") == tags["og:description"]
+    assert content(page, property="og:site_name") == shared["og:site_name"]
+    assert content(page, property="og:image:alt") == shared["og:image:alt"]
+    assert '"@type": "Event"' not in html_text
+
+
+def test_course_page_blocks_1_6_and_1_7_are_those_of_the_landing(
+    make_settings: SettingsFactory,
+) -> None:
+    page, _ = course_page(make_settings, "live")
+    shown = page.find("main").text()
+
+    texts = [text for number in ("1.6", "1.7") for text in copy.block_texts(number, "live")]
+    assert [text for text in texts if text not in shown] == []
 
 
 def test_materials_page(make_settings: SettingsFactory) -> None:

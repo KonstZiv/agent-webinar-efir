@@ -1,0 +1,101 @@
+{#- The page of the course /course for advertising traffic: the layout of landing.html (its
+    classes, landing.css), the texts of docs/copy.md, section 13. ``page`` comes from the route,
+    ``blocks`` (1.6 and 1.7, unchanged) from the foundation; the page has no mode or date logic.
+    The form is the partial of the slice «реєстрація і лист», with the title and the intro of
+    13.2 in ``form_texts``. The counters are not included. -#}
+{% extends "base.html" %}
+{% block main %}
+<div class="landing">
+  <section class="landing-hero" aria-labelledby="landing-hero-title">
+    <div class="landing-hero__card">
+      <p class="landing-hero__eyebrow"><span class="landing-hero__dot" aria-hidden="true"></span><span>{{ page.hero.eyebrow }}</span></p>
+      <h1 class="landing-hero__title" id="landing-hero-title">{{ page.hero.title }}</h1>
+      <p class="landing-hero__subtitle">{{ page.hero.subtitle }}</p>
+      <div class="landing-hero__facts">
+        {% if page.hero.when %}<p class="landing-fact landing-fact--when"><span class="landing-icon landing-icon--calendar" aria-hidden="true"></span><span>{{ page.hero.when }}</span></p>{% endif %}
+        <p class="landing-fact"><span class="landing-icon landing-icon--person" aria-hidden="true"></span><span>{{ page.hero.host }}</span></p>
+      </div>
+      <div class="landing-hero__actions">
+        <a class="landing-button" href="#register">{{ page.hero.button }}</a>
+        <p class="landing-hero__note">{{ page.hero.note }}</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="landing-slot landing-slot--form">{% include "_form.html" ignore missing %}</div>
+
+  <section class="landing-section" aria-labelledby="course-how">
+    <div class="landing-section__head">
+      <h2 class="landing-section__title" id="course-how">{{ page.how.title }}</h2>
+    </div>
+    <ol class="landing-steps landing-steps--plain" role="list">
+      {% for item in page.how.items %}
+      <li class="landing-steps__item"><p class="landing-steps__text">{{ item }}</p></li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="landing-section" aria-labelledby="course-join">
+    <div class="landing-callout">
+      <h2 class="landing-section__title" id="course-join">{{ page.join.title }}</h2>
+      <p class="landing-callout__text">{{ page.join.text }}</p>
+      <p class="landing-callout__link"><a href="{{ page.join.link.url }}" target="_blank" rel="noopener">{{ page.join.link.text }}</a></p>
+    </div>
+  </section>
+
+  <section class="landing-section" aria-labelledby="course-audience">
+    <div class="landing-section__head">
+      <h2 class="landing-section__title" id="course-audience">{{ page.audience.title }}</h2>
+    </div>
+    <ul class="landing-points" role="list">
+      {% for item in page.audience.items %}
+      <li class="landing-points__item"><span>{{ item }}</span></li>
+      {% endfor %}
+    </ul>
+    <p class="landing-card__note">{{ page.audience.note }}</p>
+  </section>
+
+  <section class="landing-section" aria-labelledby="landing-course">
+    <div class="landing-section__head">
+      <h2 class="landing-section__title" id="landing-course">{{ blocks.course.title }}</h2>
+      <p class="landing-section__lead">{{ blocks.course.intro }}</p>
+    </div>
+    <div class="landing-course">
+      {% for section in blocks.course.sections %}
+      {% if section.always_visible %}
+      <div class="landing-course__card">
+        <h3 class="landing-course__title">{{ section.title }}</h3>
+        <div class="landing-prose">{{ section.html }}</div>
+      </div>
+      {% else %}
+      <details class="landing-course__item">
+        <summary class="landing-course__summary">{{ section.title }}</summary>
+        <div class="landing-prose">{{ section.html }}</div>
+        {% for block in section.blocks %}
+        <details class="landing-course__block">
+          <summary class="landing-course__summary">{{ block.title }}</summary>
+          <div class="landing-prose">{{ block.html }}</div>
+        </details>
+        {% endfor %}
+      </details>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="landing-section" aria-labelledby="landing-presenter">
+    <div class="landing-section__head">
+      <h2 class="landing-section__title" id="landing-presenter">{{ blocks.presenter.title }}</h2>
+    </div>
+    <div class="landing-person">
+      <span class="landing-person__avatar" aria-hidden="true"><span class="landing-icon landing-icon--person"></span></span>
+      <div class="landing-person__body">
+        <p class="landing-person__name">{{ blocks.presenter.name }}</p>
+        <p class="landing-person__text">{{ blocks.presenter.text }}</p>
+      </div>
+    </div>
+  </section>
+
+  <p class="course-record"><a href="{{ page.record.url }}">{{ page.record.text }}</a></p>
+</div>
+{% endblock %}
