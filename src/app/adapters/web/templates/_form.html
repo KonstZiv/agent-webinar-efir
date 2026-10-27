@@ -21,10 +21,10 @@
   <p class="register__intro">{{ form_texts.intro }}</p>
   {%- elif site_mode == "replay" %}
   <h2 class="register__title">Зареєструватися і дивитися запис</h2>
-  <p class="register__intro">Після реєстрації відкриється запис ефіру. Ви також отримаєте запрошення на перше заняття курсу — середа, 28.10.2026, 19:00 за Києвом. Потрібна лише адреса електронної пошти.</p>
+  <p class="register__intro">Після реєстрації відкриється запис ефіру. Ви також отримаєте запрошення на найближче заняття курсу{% if registration.lesson %} — {{ registration.lesson.lesson_weekday }}, {{ registration.lesson.lesson_date_short }}, {{ registration.lesson.lesson_start }} за Києвом{% endif %}. Потрібна лише адреса електронної пошти.</p>
   {%- else %}
   <h2 class="register__title">Зареєструватися</h2>
-  <p class="register__intro">Запрошення на перше заняття курсу — одразу на пошту. Потрібна лише адреса електронної пошти.</p>
+  <p class="register__intro">Запрошення на найближче заняття курсу — одразу на пошту. Потрібна лише адреса електронної пошти.</p>
   {%- endif %}
   <form class="register__form" method="post" action="/register#register" novalidate
         hx-post="/register" hx-target="#register" hx-swap="outerHTML">
@@ -32,7 +32,7 @@
       <span class="field__label">Електронна пошта</span>
       <input class="field__input" type="email" name="email" value="{{ state.email if state else '' }}" placeholder="name@example.com" autocomplete="email" inputmode="email" maxlength="254"
              {%- if email_error %} aria-invalid="true" aria-describedby="email-error email-hint"{% else %} aria-describedby="email-hint"{% endif %}>
-      <span class="field__hint" id="email-hint">Сюди надійде запрошення на перше заняття.</span>
+      <span class="field__hint" id="email-hint">Сюди надійде запрошення на заняття.</span>
       {%- if "email_empty" in problems %}
       <span class="field__error" id="email-error">Введіть адресу електронної пошти.</span>
       {%- elif "email_invalid" in problems %}

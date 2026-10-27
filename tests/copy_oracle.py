@@ -52,6 +52,9 @@ EVENT_SECTIONS = frozenset({"1.1", "5", "6.1", "10", "11"})
 # EVENT_START and EVENT_END of the test application: naive Kyiv wall time, as the site reads it.
 EVENT_START = datetime.fromisoformat(REQUIRED_ENV["EVENT_START"])
 EVENT_END = datetime.fromisoformat(REQUIRED_ENV["EVENT_END"])
+# LESSON_START and LESSON_END of the test application; copy.md's values {lesson_…} follow them.
+LESSON_START = datetime.fromisoformat(REQUIRED_ENV["LESSON_START"])
+LESSON_END = datetime.fromisoformat(REQUIRED_ENV["LESSON_END"])
 
 MODES = ("live", "replay")
 # Labels of blocks 1.2–1.7 whose values the page shows; the label itself is not shown.
@@ -123,25 +126,40 @@ def event_values(start: datetime, end: datetime) -> dict[str, str]:
     }
 
 
-def lesson_values(start: datetime) -> dict[str, str]:
-    """The values ``{lesson_…}`` of copy.md, section 11, for a naive Kyiv wall time.
+def lesson_values(start: datetime, end: datetime) -> dict[str, str]:
+    """The values ``{lesson_…}`` of copy.md, section 11, for naive Kyiv wall times.
 
-    >>> lesson_values(datetime(2026, 10, 28, 19, 0))
-    {'lesson_weekday': 'середа', 'lesson_date': '28 жовтня 2026 року', 'lesson_start': '19:00'}
+    >>> values = lesson_values(datetime(2026, 11, 2, 19, 0), datetime(2026, 11, 2, 21, 0))
+    >>> values["lesson_weekday"], values["lesson_weekday_capital"], values["lesson_date"]
+    ('понеділок', 'Понеділок', '2 листопада 2026 року')
+    >>> values["lesson_date_short"], values["lesson_day_month"]
+    ('02.11.2026', '2 листопада')
+    >>> values["lesson_start"], values["lesson_end"]
+    ('19:00', '21:00')
     """
+    weekday = WEEKDAYS[start.weekday()]
+    day_month = f"{start.day} {MONTHS[start.month - 1]}"
     return {
-        "lesson_weekday": WEEKDAYS[start.weekday()],
-        "lesson_date": f"{start.day} {MONTHS[start.month - 1]} {start.year} року",
+        "lesson_weekday": weekday,
+        "lesson_weekday_capital": weekday[0].upper() + weekday[1:],
+        "lesson_date": f"{day_month} {start.year} року",
+        "lesson_date_short": f"{start.day:02d}.{start.month:02d}.{start.year}",
+        "lesson_day_month": day_month,
         "lesson_start": f"{start:%H:%M}",
+        "lesson_end": f"{end:%H:%M}",
     }
 
 
-def course_text(lesson_start: datetime) -> str:
-    """docs/copy.md with the values of the webinar and of the nearest lesson put in."""
-    text = copy_text()
-    for name, value in lesson_values(lesson_start).items():
+def fill_lesson(text: str, start: datetime, end: datetime) -> str:
+    """``text`` with the values ``{lesson_…}`` put in; the other values stay."""
+    for name, value in lesson_values(start, end).items():
         text = text.replace(f"{{{name}}}", value)
     return text
+
+
+def course_text(lesson_start: datetime, lesson_end: datetime | None = None) -> str:
+    """docs/copy.md with the values of the webinar and of the nearest lesson put in."""
+    return copy_text(lesson_start=lesson_start, lesson_end=lesson_end)
 
 
 def fill(text: str, start: datetime, end: datetime) -> str:
@@ -160,9 +178,17 @@ def fill(text: str, start: datetime, end: datetime) -> str:
     return _EVENT_VALUE.sub(value, text)
 
 
-def copy_text(start: datetime | None = None, end: datetime | None = None) -> str:
-    """docs/copy.md with the webinar's date put in: of the test application unless given."""
-    return fill(raw_copy_text(), start or EVENT_START, end or EVENT_END)
+def copy_text(
+    start: datetime | None = None,
+    end: datetime | None = None,
+    *,
+    lesson_start: datetime | None = None,
+    lesson_end: datetime | None = None,
+) -> str:
+    """docs/copy.md with the webinar's date and the nearest lesson's put in: of the test
+    application unless given."""
+    text = fill(raw_copy_text(), start or EVENT_START, end or EVENT_END)
+    return fill_lesson(text, lesson_start or LESSON_START, lesson_end or LESSON_END)
 
 
 def own_sections(text: str) -> dict[str, str]:
@@ -328,10 +354,11 @@ def units(markdown: str) -> list[str]:
     return texts
 
 
-def block_texts(number: str, mode: str) -> list[str]:
+def block_texts(number: str, mode: str, copy: str | None = None) -> list[str]:
     """Every text of block ``number`` (``"1.2"``–``"1.7"``) the page shows in ``mode``, except the
-    likes goal: the shared text and, if the block has groups of modes, the group of ``mode``."""
-    text = section(number)
+    likes goal: the shared text and, if the block has groups of modes, the group of ``mode``.
+    ``copy`` is copy.md with the values put in; of the test application unless given."""
+    text = section(number, copy)
     by_mode = any(_is_mode_mark(line) for line in text.splitlines())
     return units(shared(text)) + (units(mode_group(text, mode)) if by_mode else [])
 

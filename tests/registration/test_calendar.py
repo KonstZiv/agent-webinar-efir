@@ -5,8 +5,8 @@ fixed UTC offset: 21.10 is UTC+3, 28.10 already UTC+2 (requirements, section 6);
 winter time from 25.10.2026, 04:00 summer time. Texts come from docs/copy.md, sections 4 and 5
 (the webinar's times put in from ``EVENT_START`` and ``EVENT_END``); addresses are built from
 ``PUBLIC_BASE_URL``. The webinar keeps v1's ``UID`` with ``SEQUENCE`` 1 or more: after the move
-to 21.10 v1 gives ``SEQUENCE:1`` (docs/contract.md, section 6). The lesson keeps its ``UID`` too:
-moved from 26.10 to 28.10, it has ``SEQUENCE:1``.
+to 21.10 v1 gives ``SEQUENCE:1`` (docs/contract.md, section 6). The lesson has an event for each
+date, ``lesson-{date of LESSON_START}@pythoncourse.me``, and no ``SEQUENCE``.
 """
 
 from datetime import UTC, date, datetime, timedelta
@@ -22,6 +22,8 @@ from tests.registration.conftest import ClientFactory
 
 NOW = datetime(2026, 10, 13, 8, 0, tzinfo=UTC)
 PUBLIC = REQUIRED_ENV["PUBLIC_BASE_URL"]
+PUBLIC_HOST = PUBLIC.split("://", 1)[1]
+UID_DOMAIN = "@pythoncourse.me"  # an identifier of an event, not an address
 MAIN_SITE = "https://agent.pythoncourse.me"
 EVENTS = {
     "/calendar.ics": {
@@ -34,7 +36,7 @@ EVENTS = {
     },
     "/calendar/lesson.ics": {
         "copy": copy.table(copy.section("4")),
-        "uid": "lesson-2026-10-26@pythoncourse.me",
+        "uid": f"lesson-2026-10-28{UID_DOMAIN}",
         "start": "DTSTART;TZID=Europe/Kyiv:20261028T190000",
         "end": "DTEND;TZID=Europe/Kyiv:20261028T210000",
         "utc_start": datetime(2026, 10, 28, 17, 0, tzinfo=UTC),
@@ -58,7 +60,7 @@ def event_of(response: httpx.Response) -> icalendar.Event:
 
 
 def public(value: str) -> str:
-    return value.replace(MAIN_SITE, PUBLIC)
+    return value.replace(MAIN_SITE, PUBLIC).replace("agent.pythoncourse.me", PUBLIC_HOST)
 
 
 def moment(value: str) -> datetime:
@@ -176,14 +178,30 @@ def test_the_webinar_event_supersedes_v1s(client_factory: ClientFactory) -> None
     assert int(webinar.decoded("SEQUENCE")) >= 1
 
 
-def test_the_moved_lesson_supersedes_the_one_of_26_10(client_factory: ClientFactory) -> None:
-    """The lesson of 26.10 had no ``SEQUENCE`` (0); moved to 28.10 under the same ``UID`` it
-    has ``SEQUENCE:1``, so a calendar that added the old event takes the new date."""
-    response = fetch(client_factory, "/calendar/lesson.ics")
-    event = event_of(response)
+def test_each_lesson_is_its_own_event_without_sequence(client_factory: ClientFactory) -> None:
+    """The ``UID`` holds the date of ``LESSON_START``: the lesson of 02.11 is a new event beside
+    the one of 28.10, which stays in calendars as a past one; no ``SEQUENCE`` is written."""
+    first = fetch(client_factory, "/calendar/lesson.ics")
+    next_lesson = fetch(
+        client_factory,
+        "/calendar/lesson.ics",
+        LESSON_START="2026-11-02T19:00",
+        LESSON_END="2026-11-02T21:00",
+    )
+    event = event_of(next_lesson)
+    lines = next_lesson.text.split("\r\n")
+    start, end = datetime(2026, 11, 2, 19), datetime(2026, 11, 2, 21)
+    texts = copy.table(copy.section("4", copy.copy_text(lesson_start=start, lesson_end=end)))
 
-    assert "SEQUENCE:1" in response.text.split("\r\n")
-    assert str(event["UID"]) == "lesson-2026-10-26@pythoncourse.me"
+    assert str(event_of(first)["UID"]) == f"lesson-2026-10-28{UID_DOMAIN}"
+    assert str(event["UID"]) == f"lesson-2026-11-02{UID_DOMAIN}"
+    assert not any(line.startswith("SEQUENCE") for line in lines + first.text.split("\r\n"))
+    assert "DTSTART;TZID=Europe/Kyiv:20261102T190000" in lines
+    assert "DTEND;TZID=Europe/Kyiv:20261102T210000" in lines
+    assert str(event["SUMMARY"]) == texts["Назва"] == (
+        "Заняття курсу «Агентна розробка на Python» — 2 листопада"
+    )
+    assert str(event["DESCRIPTION"]) == public(texts["Опис"])
 
 
 @pytest.mark.parametrize(

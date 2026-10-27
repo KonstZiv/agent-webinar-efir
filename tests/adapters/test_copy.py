@@ -181,9 +181,9 @@ def test_course_accordion() -> None:
     course = load_page_texts(DOCS, event=EVENT).landing["live"].blocks.course
     by_title = {section.title: section for section in course.sections}
 
-    # copy.md, 1.7 «Подання»: the intro, «Перше заняття» and «Вартість» are always visible.
+    # copy.md, 1.7 «Подання»: the intro, «Найближче заняття» and «Вартість» are always visible.
     assert [section.title for section in course.sections if section.always_visible] == [
-        "Перше заняття",
+        "Найближче заняття",
         "Вартість",
     ]
     assert len(course.sections) == 11

@@ -1,4 +1,4 @@
-"""The invitation to the first lesson (docs/copy.md, section 3; requirements, section 6).
+"""The invitation to the nearest lesson (docs/copy.md, section 3; requirements, section 6).
 
 The oracle reads the letter from copy.md itself: the HTML version shows exactly its text, the
 text version shows its lines with links as «текст — адреса». Addresses in the letter and the
@@ -7,6 +7,7 @@ main address); without a bot the paragraph «Інструкція «Зроби �
 """
 
 import re
+from datetime import datetime
 
 import pytest
 
@@ -26,6 +27,7 @@ LETTER = copy.section("3")
 BODY, NO_BOT, FOOTER = quotes(LETTER)
 BOT_PARAGRAPH = "**Інструкція «Зроби сам»**"
 MAIN_SITE = "https://agent.pythoncourse.me"
+COURSE_PAGE = "https://edu.cbsystematics.com/ua/courses/ai-agent"
 _MD_LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 
 
@@ -50,9 +52,41 @@ def substitute(line: str, public: str = PUBLIC) -> str:
     )
 
 
-def compose(*, with_bot: bool = True, public: str = PUBLIC) -> OutgoingEmail:
-    composer = JinjaInvitationComposer(public_base_url=public, sender_email=SENDER)
+def compose(
+    *,
+    with_bot: bool = True,
+    public: str = PUBLIC,
+    lesson_start: datetime = copy.LESSON_START,
+    lesson_end: datetime = copy.LESSON_END,
+) -> OutgoingEmail:
+    composer = JinjaInvitationComposer(
+        public_base_url=public,
+        sender_email=SENDER,
+        lesson_start=lesson_start,
+        lesson_end=lesson_end,
+    )
     return composer.invitation(RECIPIENT, TOKEN, BOT_URL if with_bot else None)
+
+
+def test_the_letter_follows_the_next_lesson() -> None:
+    """With ``LESSON_START`` 02.11 the subject and the text speak of Monday, 2 листопада."""
+    start, end = datetime(2026, 11, 2, 19), datetime(2026, 11, 2, 21)
+    text = copy.copy_text(lesson_start=start, lesson_end=end)
+    letter = copy.section("3", text)
+
+    message = compose(lesson_start=start, lesson_end=end)
+
+    assert message.subject == "Запрошення на заняття курсу — 2 листопада, 19:00 за Києвом"
+    assert message.subject == copy.one(letter, "Тема")
+    for line in message.text.split("\n"):
+        assert "28.10" not in line and "{" not in line
+    assert "Коли: понеділок, 2 листопада 2026 року, 19:00–21:00 за Києвом; Microsoft Teams." in (
+        message.text
+    )
+    assert "До зустрічі 2 листопада," in message.text
+    assert "перше відвідування заняття відкрите для всіх, хто зареєструвався протягом" in (
+        message.text
+    )
 
 
 @pytest.fixture(scope="module", params=[True, False], ids=["bot", "no-bot"])
@@ -117,6 +151,7 @@ def test_html_links(html: Node, with_bot: bool) -> None:
     assert found == {
         f"{PUBLIC}/go/lesson": f"{PUBLIC}/go/lesson",
         "Додати заняття в календар": f"{PUBLIC}/calendar/lesson.ics",
+        COURSE_PAGE: COURSE_PAGE,
         **bot,
         PUBLIC: PUBLIC,
         "Відписатися": f"{PUBLIC}/unsubscribe/{TOKEN}",
@@ -161,7 +196,7 @@ def test_every_site_link_starts_with_the_public_address(with_bot: bool) -> None:
     urls = [url.rstrip(".:,") for url in re.findall(r"https?://[^\s<>\"]+", message.text)]
 
     for url in [*hrefs, *urls]:
-        assert url == public or url.startswith((f"{public}/", "https://t.me/")), url
+        assert url in (public, COURSE_PAGE) or url.startswith((f"{public}/", "https://t.me/")), url
     assert "agent.pythoncourse.me" not in message.html.replace("agent-next.pythoncourse.me", "")
     assert "agent.pythoncourse.me" not in message.text.replace("agent-next.pythoncourse.me", "")
     assert "на сайті agent-next.pythoncourse.me." in message.text
