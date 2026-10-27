@@ -5,7 +5,7 @@ failed invitations, the whole list), so the slice has its own read-only port.
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Protocol
 
 
@@ -42,6 +42,10 @@ class ExportRow:
     utm_medium: str | None
     utm_campaign: str | None
     utm_content: str | None
+    ref_code: str | None = None
+    referrals: int = 0  # participants whose ``referred_by`` is this one
+    groups: tuple[str, ...] = ()  # codes of the course groups, sorted
+    attended: tuple[date, ...] = ()  # dates of the lessons with a mark, sorted, each once
 
 
 class CountSource(Protocol):

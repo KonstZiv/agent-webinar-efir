@@ -1,0 +1,62 @@
+{#-
+  The attendance mark of the feature «відмітка присутності» (docs/requirements.md, section 9а):
+  div#checkin, which POST /checkin replaces with the success or with the form and its problem
+  (htmx). Without JavaScript the form posts to the page and gets it back with the same block.
+  Texts: docs/copy.md 14.1, verbatim. Renders nothing where the slice is not installed.
+-#}
+{%- if checkin is defined -%}
+{%- set state = checkin_state | default(none) -%}
+{%- set texts = checkin.texts -%}
+<div class="checkin" id="checkin">
+  {%- if state and state.success %}
+  <div class="checkin__done" id="checkin-result" role="status" tabindex="-1">
+    <h1 class="checkin__title">{{ texts.success_title }}</h1>
+    <p>{{ state.success }}</p>
+    {%- if state.feedback %}
+    <p>{{ texts.success_feedback }}</p>
+    {%- endif %}
+  </div>
+  {%- else %}
+  <h1 class="checkin__title">{{ texts.title }}</h1>
+  <p class="checkin__intro">{{ texts.intro }}</p>
+  <form class="checkin__form" method="post" action="{{ checkin.url }}#checkin-result" novalidate
+        hx-post="{{ checkin.url }}" hx-target="#checkin" hx-swap="outerHTML"
+        hx-on::before-request="const b = this.querySelector('button'); b.textContent = b.dataset.busyLabel; b.disabled = true">
+    {%- if state and state.problem %}
+    <p class="checkin__error" id="checkin-result" role="alert" tabindex="-1">{{ texts.errors[state.problem] }}</p>
+    {%- endif %}
+    <div class="checkin__field">
+      <label class="checkin__label" for="checkin-code">{{ texts.code_label }}</label>
+      <input class="checkin__input checkin__input--code" id="checkin-code" name="code" type="text"
+             value="{{ state.code if state else '' }}" placeholder="{{ texts.code_placeholder }}"
+             maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    </div>
+    <div class="checkin__field">
+      <label class="checkin__label" for="checkin-email">{{ texts.email_label }}</label>
+      <input class="checkin__input" id="checkin-email" name="email" type="email"
+             value="{{ state.email if state else '' }}" placeholder="{{ texts.email_placeholder }}"
+             autocomplete="email" aria-describedby="checkin-email-hint">
+      <p class="checkin__hint" id="checkin-email-hint">{{ texts.email_hint }}</p>
+    </div>
+    <fieldset class="checkin__rating">
+      <legend class="checkin__label">{{ texts.rating_label }}</legend>
+      <div class="checkin__choices">
+        {%- for number in checkin.ratings %}
+        <label class="checkin__choice">
+          <input class="checkin__radio" type="radio" name="rating" value="{{ number }}"
+                 {%- if state and state.rating == number | string %} checked{% endif %}>
+          <span>{{ number }}</span>
+        </label>
+        {%- endfor %}
+      </div>
+      <p class="checkin__edges"><span>{{ texts.rating_low }}</span><span>{{ texts.rating_high }}</span></p>
+    </fieldset>
+    <div class="checkin__field">
+      <label class="checkin__label" for="checkin-question">{{ texts.question_label }}</label>
+      <textarea class="checkin__input" id="checkin-question" name="question" rows="4">{{ state.question if state else '' }}</textarea>
+    </div>
+    <button class="checkin__button" type="submit" data-busy-label="{{ texts.button_busy }}">{{ texts.button }}</button>
+  </form>
+  {%- endif %}
+</div>
+{%- endif -%}

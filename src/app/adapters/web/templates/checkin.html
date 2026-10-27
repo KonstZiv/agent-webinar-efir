@@ -1,0 +1,15 @@
+{#-
+  /checkin: the page of the attendance mark, and the answer of POST /checkin without
+  JavaScript: the block (_checkin.html) on a small page. Not indexed; no event markup, so the
+  block `meta` holds the description only (docs/copy.md 14.2).
+-#}
+{% extends "base.html" %}
+{% block title %}{{ checkin.texts.tag_title }}{% endblock %}
+{% block meta %}
+  <meta name="description" content="{{ checkin.texts.tag_description }}">
+{% endblock %}
+{% block main %}
+<section class="checkin-page">
+{% include "_checkin.html" %}
+</section>
+{% endblock %}

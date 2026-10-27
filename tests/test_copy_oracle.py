@@ -506,7 +506,7 @@ def test_course_page_follows_lesson_start(make_settings: SettingsFactory) -> Non
 
 # The lesson after the first one: a Monday, 02.11.2026.
 NEXT_LESSON = {"LESSON_START": "2026-11-02T19:00", "LESSON_END": "2026-11-02T21:00"}
-LESSON_SECTIONS = frozenset({"1.4", "1.7", "1.8", "2", "3", "4", "6.2", "11", "13", "13.1"})
+LESSON_SECTIONS = frozenset({"1.4", "1.7", "1.8", "2", "3", "4", "6.2", "11", "13", "13.1", "14.1"})
 
 
 def test_lesson_values_stand_only_where_the_site_puts_them() -> None:

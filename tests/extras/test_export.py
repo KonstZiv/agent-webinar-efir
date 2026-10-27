@@ -11,10 +11,12 @@ only: never printed, never stored.
 """
 
 from collections.abc import Callable
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 
 import pytest
+from sqlalchemy.orm import Session
 
+from app.adapters.db.models import Attendance, Checkin, ParticipantGroup
 from app.adapters.extras.keys import REPORTS
 from app.core.entities import TelegramAccount
 from app.core.extras.export import cells, protect
@@ -33,6 +35,8 @@ from tests.extras.helpers import (
 )
 
 KYIV_SUMMER = timezone(timedelta(hours=3))
+NOW = datetime(2026, 11, 2, 16, 0, tzinfo=UTC)
+HOUR = timedelta(hours=1)
 
 
 def export(site: Site) -> list[list[str]]:
@@ -132,6 +136,10 @@ def test_every_column_of_a_full_row(site: Site, participant_factory: Participant
         "1",
         "1",
         "middle",
+        "",
+        "0",
+        "",
+        "",
         "telegram",
         "social",
         "webinar",
@@ -148,7 +156,9 @@ def test_a_participant_of_v1_has_empty_cells(
 
     assert row["origin"] == ""
     assert row["telegram_linked"] == "0"
-    assert [row[name] for name in EXPORT_COLUMNS[4:]] == [""] * 6
+    assert row["referrals"] == "0"
+    empty = [name for name in EXPORT_COLUMNS[4:] if name != "referrals"]
+    assert [row[name] for name in empty] == [""] * 9
 
 
 @pytest.mark.parametrize(
@@ -258,11 +268,74 @@ def test_cells_of_a_row() -> None:
         "1",
         "0",
         "",
+        "",
+        "0",
+        "",
+        "",
         "'@me",
         "",
         "",
         "",
     )
+
+
+def test_cells_of_referrals_groups_and_attendance() -> None:
+    row = ExportRow(
+        email="cells@example.com",
+        registered_at=datetime(2026, 10, 20, 19, 5, 30, tzinfo=KYIV_SUMMER),
+        origin="v2",
+        telegram_linked=False,
+        channel_member=None,
+        level=None,
+        utm_source=None,
+        utm_medium=None,
+        utm_campaign=None,
+        utm_content=None,
+        ref_code="=ref",
+        referrals=3,
+        groups=("cbs-2026-10", "open-2026-10"),
+        attended=(date(2026, 10, 28), date(2026, 11, 2)),
+    )
+
+    assert cells(row)[6:10] == ("'=ref", "3", "cbs-2026-10;open-2026-10", "2026-10-28;2026-11-02")
+
+
+def test_referrals_groups_and_attendance_in_the_file(
+    site: Site, participant_factory: ParticipantFactory
+) -> None:
+    inviter = participant_factory("inviter@example.com", ref_code="INV1")
+    participant_factory("friend-1@example.com", referred_by=inviter.id)
+    participant_factory("friend-2@example.com", referred_by=inviter.id)
+    with Session(site.engine) as session, session.begin():
+        for code in ("open-2026-10", "cbs-2026-10"):
+            session.add(
+                ParticipantGroup(participant_id=inviter.id, group_code=code, assigned_at=NOW)
+            )
+        for lesson_date in (date(2026, 11, 2), date(2026, 10, 28), date(2026, 11, 2)):
+            checkin = Checkin(
+                code="ABCD", lesson_date=lesson_date, opened_at=NOW, closes_at=NOW + HOUR
+            )
+            session.add(checkin)
+            session.flush()
+            session.add(
+                Attendance(
+                    checkin_id=checkin.id,
+                    participant_id=inviter.id,
+                    source="site",
+                    created_at=NOW,
+                    updated_at=NOW,
+                )
+            )
+
+    rows = by_email(export(site))
+
+    assert rows["inviter@example.com"]["ref_code"] == "INV1"
+    assert rows["inviter@example.com"]["referrals"] == "2"
+    assert rows["inviter@example.com"]["groups"] == "cbs-2026-10;open-2026-10"
+    assert rows["inviter@example.com"]["attended"] == "2026-10-28;2026-11-02"
+    assert rows["friend-1@example.com"]["referrals"] == "0"
+    assert rows["friend-1@example.com"]["groups"] == ""
+    assert rows["friend-1@example.com"]["attended"] == ""
 
 
 # --- what the file never holds ------------------------------------------------------------

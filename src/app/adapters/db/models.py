@@ -8,18 +8,20 @@ can find and drop them later. All timestamps are UTC.
 """
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Identity,
     Index,
     Integer,
     MetaData,
+    SmallInteger,
     String,
     UniqueConstraint,
     Uuid,
@@ -44,6 +46,8 @@ EMAIL_STATUSES = ("pending", "sent", "failed")
 LINK_TOKEN_CHARACTERS = "token ~ '^[A-Za-z0-9_-]+$'"
 LINK_TOKEN_SOURCES = ("screen", "email")
 CLICK_KINDS = ("lesson", "course")
+GROUP_CODE_FORMAT = "group_code ~ '^[a-z0-9-]{2,32}$'"
+ATTENDANCE_SOURCES = ("site", "telegram")
 
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",
@@ -181,3 +185,63 @@ class Click(Base):
     )
     kind: Mapped[str] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ParticipantGroup(Base):
+    """A participant in a course group, assigned by the teacher (``cbs-2026-10``)."""
+
+    __tablename__ = "participant_groups"
+    __table_args__ = (
+        UniqueConstraint("participant_id", "group_code"),
+        CheckConstraint(GROUP_CODE_FORMAT, name="group_code"),
+        Index("ix_participant_groups_group_code", "group_code"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    participant_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("participants.id", ondelete="CASCADE"), index=True
+    )
+    group_code: Mapped[str] = mapped_column(String(32))
+    assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class Checkin(Base):
+    """A check-in of a lesson opened by the teacher: a code for the slide and a window."""
+
+    __tablename__ = "checkins"
+    __table_args__ = (
+        CheckConstraint("closes_at > opened_at", name="window"),
+        CheckConstraint(f"group_code IS NULL OR ({GROUP_CODE_FORMAT})", name="group_code"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    code: Mapped[str] = mapped_column(String(8), index=True)
+    lesson_date: Mapped[date] = mapped_column(Date)
+    group_code: Mapped[str | None] = mapped_column(String(32))
+    opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    closes_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Attendance(Base):
+    """A participant's mark on a check-in; one per person, the rating and question optional."""
+
+    __tablename__ = "attendance"
+    __table_args__ = (
+        UniqueConstraint("checkin_id", "participant_id"),
+        CheckConstraint(_in("source", ATTENDANCE_SOURCES), name="source"),
+        CheckConstraint("rating IS NULL OR rating BETWEEN 1 AND 5", name="rating"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    checkin_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("checkins.id", ondelete="CASCADE"), index=True
+    )
+    participant_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("participants.id", ondelete="CASCADE"), index=True
+    )
+    source: Mapped[str] = mapped_column(String(8))
+    rating: Mapped[int | None] = mapped_column(SmallInteger)
+    question: Mapped[str | None] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
