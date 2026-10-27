@@ -130,7 +130,12 @@ def create_app(
     settings = settings if settings is not None else load_settings()
     docs = docs_dir if docs_dir is not None else DOCS_DIR
     legal = load_legal_texts(docs)
-    page_texts = load_page_texts(docs, event=_event(settings))
+    page_texts = load_page_texts(
+        docs,
+        event=_event(settings),
+        lesson_start=settings.lesson_start,
+        lesson_end=settings.lesson_end,
+    )
     page_meta = None if settings.redirect_base_url else build_page_meta(page_texts, settings)
     configure_logging()
 

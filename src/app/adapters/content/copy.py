@@ -8,7 +8,8 @@
 - section 10 — the service tags of ``/`` by mode, the shared ones, the event markup and the
   titles of service pages (requirements, section 13);
 - section 13 — the page of the course ``/course`` (``load_course_texts``): its own texts and
-  service tags; the values ``{lesson_…}`` come from ``LESSON_START`` the same way;
+  service tags; the values ``{lesson_…}`` come from ``LESSON_START`` and ``LESSON_END`` the
+  same way, in block 1.7 too;
 - docs/materials.md — the materials page, whole.
 
 Texts are taken verbatim; a missing section, group or label stops the application, as a
@@ -70,8 +71,21 @@ _ALWAYS_VISIBLE = re.compile(r"([^.]*)видно завжди")
 _QUOTED = re.compile(r"«([^»]+)»")
 _VALUE = re.compile(r"\{([^{}\s]+)\}")  # a value the site puts in: «{event_date}»
 EVENT_VALUE_NAMES = frozenset(f"{PREFIX}{field.name}" for field in fields(EventValues))
-LESSON_VALUE_NAMES = frozenset({"lesson_weekday", "lesson_date", "lesson_start"})  # section 13 only
+LESSON_VALUE_NAMES = frozenset(
+    {
+        "lesson_weekday",
+        "lesson_weekday_capital",
+        "lesson_date",
+        "lesson_date_short",
+        "lesson_day_month",
+        "lesson_start",
+        "lesson_end",
+    }
+)
 COURSE_SECTION_NUMBER = "13"
+_SENTENCE_END = re.compile(r"(?<=\.) ")
+# «: {lesson_weekday}, {lesson_date_short}, {lesson_start} за Києвом» up to the next «;» (1.4)
+_LESSON_CLAUSE = re.compile(r":[^;:]*\{lesson_[^;]*(?=;)")
 COURSE_FIRST_SCREEN = "13.1"
 COURSE_FORM = "13.2"
 COURSE_HOW = "13.3"
@@ -329,14 +343,13 @@ def _fill(
     """``lines`` with the values of the webinar's date put in; an unknown value stops the app.
 
     Without ``event`` (the redirect stub: no ``EVENT_*``, no page rendered) the values the
-    foundation knows stay as written. The values ``{lesson_…}`` are known in section 13 only;
-    without ``lesson`` (no ``LESSON_START``) they stay as written.
+    foundation knows stay as written. Without ``lesson`` (no ``LESSON_START``) the values
+    ``{lesson_…}`` stay as written in section 13, whose line «Коли» is then not shown; in the
+    other sections the sentences that hold them are left out, so no value reaches a page.
     """
-    values = event.placeholders() if event is not None else {}
-    known = EVENT_VALUE_NAMES
-    if number.split(".")[0] == COURSE_SECTION_NUMBER:
-        values = values | (lesson or {})
-        known = known | LESSON_VALUE_NAMES
+    values = (event.placeholders() if event is not None else {}) | (lesson or {})
+    known = EVENT_VALUE_NAMES | LESSON_VALUE_NAMES
+    drop = lesson is None and number.split(".")[0] != COURSE_SECTION_NUMBER
 
     def value(match: re.Match[str]) -> str:
         name = match.group(1)
@@ -344,7 +357,14 @@ def _fill(
             raise ContentError(f"{COPY_FILE}: unknown value «{match.group(0)}» in section {number}")
         return values.get(name, match.group(0))
 
-    return [_VALUE.sub(value, line) for line in lines]
+    def filled(line: str) -> str:
+        if drop and number == BENEFITS_SECTION:
+            line = _LESSON_CLAUSE.sub("", line)  # only the date goes; the rest of the item stays
+        elif drop and "{lesson_" in line:
+            line = " ".join(s for s in _SENTENCE_END.split(line) if "{lesson_" not in s)
+        return _VALUE.sub(value, line)
+
+    return [filled(line) for line in lines]
 
 
 def _section(
@@ -522,18 +542,20 @@ def _course(lines: list[str]) -> Course:
     )
 
 
-def _landing(lines: list[str], event: EventValues | None) -> dict[SiteMode, LandingTexts]:
+def _landing(
+    lines: list[str], event: EventValues | None, lesson: dict[str, str] | None
+) -> dict[SiteMode, LandingTexts]:
     """Blocks 1.2–1.7 of each mode."""
-    on_air = _section(lines, ON_AIR_SECTION, event)
+    on_air = _section(lines, ON_AIR_SECTION, event, lesson)
     on_air_shared = _shared(on_air)
     on_air_items = _items(on_air_shared, ON_AIR_SECTION)
     likes_goal, likes_goal_until = _likes_goal(on_air_shared)
-    benefits = _section(lines, BENEFITS_SECTION, event)
+    benefits = _section(lines, BENEFITS_SECTION, event, lesson)
     benefits_title = _inline(_shared(benefits), TITLE, BENEFITS_SECTION)
-    channel = _section(lines, CHANNEL_SECTION, event)
-    presenter = _section(lines, PRESENTER_SECTION, event)
+    channel = _section(lines, CHANNEL_SECTION, event, lesson)
+    presenter = _section(lines, PRESENTER_SECTION, event, lesson)
     # The same in both modes.
-    audience = _audience(_section(lines, AUDIENCE_SECTION, event))
+    audience = _audience(_section(lines, AUDIENCE_SECTION, event, lesson))
     channel_block = Channel(
         title=_inline(channel, TITLE, CHANNEL_SECTION),
         text=_inline(channel, TEXT, CHANNEL_SECTION),
@@ -544,7 +566,7 @@ def _landing(lines: list[str], event: EventValues | None) -> dict[SiteMode, Land
         name=_inline(presenter, PRESENTER_NAME, PRESENTER_SECTION),
         text=_inline(presenter, TEXT, PRESENTER_SECTION),
     )
-    course = _course(_section(lines, COURSE_SECTION, event))
+    course = _course(_section(lines, COURSE_SECTION, event, lesson))
     landing: dict[SiteMode, LandingTexts] = {}
     for mode in MODES:
         on_air_group = _mode_group(on_air, mode, ON_AIR_SECTION)
@@ -602,20 +624,39 @@ def _course_list(lines: list[str], where: str, *, note: bool) -> CourseList:
     )
 
 
-def load_course_texts(docs_dir: Path, *, lesson_start: datetime | None) -> CourseTexts:
+def lesson_values(start: datetime, end: datetime) -> dict[str, str]:
+    """The values ``{lesson_…}`` of copy.md, section 11, for ``LESSON_START`` and ``LESSON_END``.
+
+    >>> values = lesson_values(datetime(2026, 11, 2, 19, 0), datetime(2026, 11, 2, 21, 0))
+    >>> values["lesson_weekday_capital"], values["lesson_date_short"], values["lesson_day_month"]
+    ('Понеділок', '02.11.2026', '2 листопада')
+    >>> values["lesson_date"], values["lesson_start"], values["lesson_end"]
+    ('2 листопада 2026 року', '19:00', '21:00')
+    """
+    values = event_values(start, end)
+    return {
+        "lesson_weekday": values.weekday,
+        "lesson_weekday_capital": values.weekday_capital,
+        "lesson_date": values.date,
+        "lesson_date_short": f"{start:%d.%m.%Y}",
+        "lesson_day_month": values.day_month,
+        "lesson_start": values.start,
+        "lesson_end": values.end,
+    }
+
+
+def load_course_texts(
+    docs_dir: Path, *, lesson_start: datetime | None, lesson_end: datetime | None = None
+) -> CourseTexts:
     """Read section 13 of copy.md, the texts of ``/course``.
 
     ``lesson_start`` — ``LESSON_START`` (naive Kyiv wall time): it fills the values
-    ``{lesson_…}``; without it the line «Коли» is not shown.
+    ``{lesson_…}``; without it the line «Коли» is not shown. ``lesson_end`` (``LESSON_END``)
+    fills ``{lesson_end}``, which section 13 does not use.
     """
     lesson = None
     if lesson_start is not None:
-        values = event_values(lesson_start, lesson_start)
-        lesson = {
-            "lesson_weekday": values.weekday,
-            "lesson_date": values.date,
-            "lesson_start": values.start,
-        }
+        lesson = lesson_values(lesson_start, lesson_end or lesson_start)
     lines = _read(docs_dir / COPY_FILE).splitlines()
 
     def part(number: str) -> list[str]:
@@ -649,12 +690,22 @@ def load_course_texts(docs_dir: Path, *, lesson_start: datetime | None) -> Cours
     )
 
 
-def load_page_texts(docs_dir: Path, *, event: EventValues | None) -> PageTexts:
+def load_page_texts(
+    docs_dir: Path,
+    *,
+    event: EventValues | None,
+    lesson_start: datetime | None = None,
+    lesson_end: datetime | None = None,
+) -> PageTexts:
     """Read the texts of ``/`` and of the materials page from ``docs_dir``.
 
     ``event`` — the values of the webinar's date from the settings; ``None`` only in the
-    redirect stub, which has no ``EVENT_*``.
+    redirect stub, which has no ``EVENT_*``. ``lesson_start``, ``lesson_end`` — ``LESSON_START``
+    and ``LESSON_END``: they fill the values ``{lesson_…}`` of block 1.7.
     """
+    lesson = None
+    if lesson_start is not None and lesson_end is not None:
+        lesson = lesson_values(lesson_start, lesson_end)
     lines = _read(docs_dir / COPY_FILE).splitlines()
     first = _section(lines, FIRST_SCREEN_SECTION, event)
     service = _section(lines, SERVICE_SECTION, event)
@@ -676,7 +727,7 @@ def load_page_texts(docs_dir: Path, *, event: EventValues | None) -> PageTexts:
     pages = _table(_group(service, SERVICE_PAGES_GROUP, SERVICE_SECTION))
     return PageTexts(
         first_screen=first_screen,
-        landing=_landing(lines, event),
+        landing=_landing(lines, event, lesson),
         service=service_texts,
         site_name=_cell(shared, "og:site_name", SHARED_GROUP),
         image_alt=_cell(shared, "og:image:alt", SHARED_GROUP),

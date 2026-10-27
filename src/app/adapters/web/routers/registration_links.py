@@ -12,6 +12,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
+from app.adapters.content.copy import lesson_values
 from app.adapters.registration.ics import CalendarEvent, build_calendar, lesson_event, webinar_event
 from app.adapters.registration.settings import required
 from app.adapters.web.dependencies import Container, ContainerDep, service
@@ -37,8 +38,19 @@ def _go(
     event = event_values(
         required(settings.event_start, "EVENT_START"), required(settings.event_end, "EVENT_END")
     )
+    lesson = (
+        lesson_values(
+            required(settings.lesson_start, "LESSON_START"),
+            required(settings.lesson_end, "LESSON_END"),
+        )
+        if kind == "lesson"
+        else None
+    )
     return container.templates.TemplateResponse(
-        request, PENDING_PAGE, {"kind": kind, "noindex": True, "event": event}, headers=SERVICE
+        request,
+        PENDING_PAGE,
+        {"kind": kind, "noindex": True, "event": event, "lesson": lesson},
+        headers=SERVICE,
     )
 
 

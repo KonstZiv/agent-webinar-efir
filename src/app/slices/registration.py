@@ -9,6 +9,7 @@ client per attempt). The check of the mail domain has one caching resolver of DN
 application (``MAIL_DOMAINS``).
 """
 
+from app.adapters.content.copy import lesson_values
 from app.adapters.ratelimit.memory import InMemoryRateLimiter
 from app.adapters.registration.composer import JinjaInvitationComposer
 from app.adapters.registration.emails import SqlInvitationStore
@@ -99,7 +100,10 @@ def install(setup: SliceSetup) -> None:
             store=services.get(INVITATION_STORE),
             sender=services.get(EMAIL_SENDER),
             composer=JinjaInvitationComposer(
-                public_base_url=settings.public_base_url, sender_email=settings.sender_email
+                public_base_url=settings.public_base_url,
+                sender_email=settings.sender_email,
+                lesson_start=required(settings.lesson_start, "LESSON_START"),
+                lesson_end=required(settings.lesson_end, "LESSON_END"),
             ),
             links=services.get(BOT_LINKS),
             clock=services.get(CLOCK),
@@ -111,10 +115,16 @@ def install(setup: SliceSetup) -> None:
         lambda: Unsubscription(participants=services.get(PARTICIPANTS), secret=unsubscribe_secret),
     )
     setup.add_middleware(SourceCookie)
+    lesson = (
+        lesson_values(settings.lesson_start, settings.lesson_end)
+        if settings.lesson_start is not None and settings.lesson_end is not None
+        else None
+    )
     setup.template_global(
         "registration",
         FormSettings(
             turnstile_site_key=settings.turnstile_site_key,
             recording_youtube_id=settings.recording_youtube_id,
+            lesson=lesson,
         ),
     )

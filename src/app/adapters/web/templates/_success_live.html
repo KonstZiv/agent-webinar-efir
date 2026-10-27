@@ -1,5 +1,5 @@
 {#- The success screen in the mode «live»: docs/copy.md, section 2, group «live». -#}
 <h2 class="success__title" tabindex="-1" data-focus>Ви зареєстровані</h2>
-<p>Запрошення на перше заняття курсу надіслано на <strong>{{ registration_state.email }}</strong>: середа, 28.10.2026, 19:00 за Києвом; Microsoft Teams.</p>
+<p>Запрошення на найближче заняття курсу надіслано на <strong>{{ registration_state.email }}</strong>{% if registration.lesson %}: {{ registration.lesson.lesson_weekday }}, {{ registration.lesson.lesson_date_short }}, {{ registration.lesson.lesson_start }} за Києвом; Microsoft Teams{% endif %}.</p>
 <p>Запис ефіру з'явиться на цьому сайті після трансляції.</p>
 <p class="success__hint">Не бачите листа? Перевірте теки «Спам» і «Промоакції».</p>

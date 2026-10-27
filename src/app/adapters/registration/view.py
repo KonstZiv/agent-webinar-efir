@@ -6,6 +6,7 @@ only where the slice is installed. ``RegistrationState`` is what ``POST /registe
 notice of the staging site.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 
@@ -15,6 +16,8 @@ class FormSettings:
 
     turnstile_site_key: str
     recording_youtube_id: str
+    # The values ``{lesson_…}`` of docs/copy.md, section 11, by their names; none without a lesson.
+    lesson: Mapping[str, str] | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -7,7 +7,7 @@ from tests.course.conftest import Site, SiteFactory
 from tests.html_tree import parse
 
 UTM = "utm_source=google&utm_medium=cpc&utm_campaign=t&utm_content=c"
-FORM_TITLE = "Зареєструватися на перше заняття"
+FORM_TITLE = "Зареєструватися на найближче заняття"
 MODES = {"live": {}, "replay": {"SITE_MODE": "replay", "RECORDING_YOUTUBE_ID": "dQw4w9WgXcQ"}}
 
 

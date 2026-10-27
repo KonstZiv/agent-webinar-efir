@@ -485,7 +485,7 @@ def test_course_page_without_lesson_start(make_settings: SettingsFactory) -> Non
     shown = page.find("main").text()
     text = copy.course_text(LESSON_START)
 
-    assert "Найближче заняття" not in shown
+    assert "Найближче заняття —" not in shown  # the line «Коли»; the block 1.7 has the title
     assert "{lesson_" not in html_text
     assert copy.one(copy.section("13.1", text), "Заголовок") in shown
     when = copy.one(copy.section("13.1", text), "Коли")
@@ -500,6 +500,80 @@ def test_course_page_follows_lesson_start(make_settings: SettingsFactory) -> Non
     assert "Найближче заняття — понеділок, 2 листопада 2026 року, 19:00 за Києвом" in (
         page.find("main").text()
     )
+
+
+# --- the nearest lesson: values {lesson_…} from LESSON_START and LESSON_END ----------------------
+
+# The lesson after the first one: a Monday, 02.11.2026.
+NEXT_LESSON = {"LESSON_START": "2026-11-02T19:00", "LESSON_END": "2026-11-02T21:00"}
+LESSON_SECTIONS = frozenset({"1.4", "1.7", "1.8", "2", "3", "4", "6.2", "11", "13", "13.1"})
+
+
+def test_lesson_values_stand_only_where_the_site_puts_them() -> None:
+    """The site fills ``{lesson_…}`` in the sections that section 11 lists: written in any
+    other, the value would reach a page, a letter or the bot as it is."""
+    found = {
+        number
+        for number, lines in copy.own_sections(copy.raw_copy_text()).items()
+        if "{lesson_" in lines
+    }
+
+    assert found <= LESSON_SECTIONS
+
+
+@pytest.mark.parametrize("mode", sorted(MODES))
+def test_the_landing_follows_lesson_start(make_settings: SettingsFactory, mode: str) -> None:
+    """Blocks 1.1–1.7 of ``/`` with the next lesson: «Понеділок, 02.11.2026, 19:00 за Києвом»."""
+    start, end = datetime(2026, 11, 2, 19), datetime(2026, 11, 2, 21)
+    text = copy.copy_text(lesson_start=start, lesson_end=end)
+    page = get(make_settings, "/", **MODES[mode], **NEXT_LESSON)
+    shown = page.find("main").text()
+
+    assert "Понеділок, 02.11.2026, 19:00 за Києвом; Microsoft Teams." in shown
+    texts = (
+        copy.block_texts("1.4", mode, text)
+        + copy.block_texts("1.7", mode, text)
+        + first_screen_texts(mode)
+    )
+    assert [unit for unit in texts if unit not in shown] == []
+    assert "на найближче заняття курсу: понеділок, 02.11.2026, 19:00 за Києвом;" in shown
+    assert "28.10.2026" not in shown
+    assert "{lesson_" not in shown
+
+
+def first_screen_texts(mode: str) -> list[str]:
+    return list(first_screen(mode).values())
+
+
+@pytest.mark.parametrize("mode", sorted(MODES))
+def test_the_landing_without_lesson_start_shows_no_value(
+    make_settings: SettingsFactory, mode: str
+) -> None:
+    """Without ``LESSON_START`` the sentence with the date is left out, nothing is half-filled."""
+    settings = make_settings(**MODES[mode]).model_copy(
+        update={"lesson_start": None, "lesson_end": None}
+    )
+    app = create_app(settings, db_probe=FakeDatabaseProbe(), overrides=fake_overrides())
+    with TestClient(app) as client:
+        response = client.get("/")
+
+    assert response.status_code == 200
+    assert "{lesson_" not in response.text
+    assert "Курс стартував 28 жовтня" in response.text
+    # 1.4 loses only the part with the date, as 1.7 does.
+    assert "на найближче заняття курсу; Microsoft Teams. У листі — перехід" in response.text
+
+
+@pytest.mark.parametrize("mode", sorted(MODES))
+def test_course_page_follows_the_next_lesson_in_every_text(
+    make_settings: SettingsFactory, mode: str
+) -> None:
+    page, _ = course_page(make_settings, mode, **NEXT_LESSON)
+    text = copy.course_text(datetime(2026, 11, 2, 19), datetime(2026, 11, 2, 21))
+    shown = page.find("main").text()
+
+    assert [unit for unit in course_units(text) if unit not in shown] == []
+    assert "Найближче заняття — понеділок, 2 листопада 2026 року, 19:00 за Києвом" in shown
 
 
 @pytest.mark.parametrize("mode", sorted(MODES))

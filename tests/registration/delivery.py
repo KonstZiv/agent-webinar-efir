@@ -16,6 +16,7 @@ from app.core.ports import LinkTokenStore
 from app.core.registration.bot_links import BotLinks
 from app.core.registration.invitation import InvitationDelivery
 from app.core.registration.ports import InvitationComposer, InvitationStore
+from tests import copy_oracle as copy
 from tests.fakes import FakeEmailSender, FixedClock
 from tests.registration.helpers import BOT, rows
 
@@ -58,7 +59,12 @@ class World:
             store=self.store or SqlInvitationStore(self.engine),
             sender=self.sender,
             composer=self.composer
-            or JinjaInvitationComposer(public_base_url=PUBLIC, sender_email=SENDER),
+            or JinjaInvitationComposer(
+                public_base_url=PUBLIC,
+                sender_email=SENDER,
+                lesson_start=copy.LESSON_START,
+                lesson_end=copy.LESSON_END,
+            ),
             links=links,
             clock=self.clock,
             unsubscribe_secret=SECRET,

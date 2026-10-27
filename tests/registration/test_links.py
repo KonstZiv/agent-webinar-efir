@@ -48,6 +48,21 @@ def test_a_set_target_is_a_temporary_redirect(
     assert response.headers["cache-control"] == "no-store"
 
 
+def test_the_lesson_page_follows_lesson_start(client_factory: ClientFactory) -> None:
+    """6.2 shows the nearest lesson: the date comes from ``LESSON_START``."""
+    start, end = datetime(2026, 11, 2, 19), datetime(2026, 11, 2, 21)
+    texts = copy.section("6.2", copy.copy_text(lesson_start=start, lesson_end=end))
+    client = client_factory(LESSON_START="2026-11-02T19:00", LESSON_END="2026-11-02T21:00")
+
+    content = main_of(client.get("/go/lesson", follow_redirects=False))
+
+    assert copy.one(texts, "Текст") in content.text()
+    assert "Найближче заняття курсу «Агентна розробка на Python» — понеділок, 2 листопада 2026" in (
+        content.text()
+    )
+    assert "28 жовтня" not in content.text()
+
+
 @pytest.mark.parametrize("path", sorted(PENDING))
 def test_without_a_target_the_page_says_the_link_will_appear(
     client_factory: ClientFactory, path: str

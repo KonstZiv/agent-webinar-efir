@@ -3,7 +3,8 @@
   «The link will appear» of /go/stream and /go/lesson (slice «реєстрація і лист»). Texts are
   verbatim from docs/copy.md, 6.1 («stream») and 6.2 («lesson»); titles — section 10,
   «Службові сторінки». The webinar's date of 6.1 is ``event`` (app.core.event_values), from
-  EVENT_START and EVENT_END. tests/registration/test_links.py compares them.
+  EVENT_START and EVENT_END; the lesson's date of 6.2 is ``lesson`` (``{lesson_…}`` of copy.md,
+  section 11), from LESSON_START and LESSON_END. tests/registration/test_links.py compares them.
 #}
 {% block title %}{% if kind == "stream" %}Посилання на трансляцію з'явиться пізніше{% else %}Посилання на заняття з'явиться пізніше{% endif %}{% endblock %}
 {% block main %}
@@ -15,7 +16,7 @@
   <p>Поки чекаєте — <a href="https://t.me/agentic_engineers">Telegram-канал «Agentic Engineers»</a>, де проходять голосування ефіру.</p>
 {% else %}
   <h1>Посилання на заняття з'явиться за добу до початку</h1>
-  <p>Перше заняття курсу «Агентна розробка на Python» — середа, 28 жовтня 2026 року, 19:00 за Києвом; Microsoft Teams. Цей перехід приведе на заняття, щойно посилання буде готове.</p>
+  <p>Найближче заняття курсу «Агентна розробка на Python» — {{ lesson.lesson_weekday }}, {{ lesson.lesson_date }}, {{ lesson.lesson_start }} за Києвом; Microsoft Teams. Цей перехід приведе на заняття, щойно посилання буде готове.</p>
   <p>Ще не зареєструвалися? <a href="/#register">Зареєструватися</a></p>
 {% endif %}
 </section>
