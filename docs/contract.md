@@ -126,7 +126,7 @@
 - Адреса клієнта, ключ обмеження частоти, — із заголовка `X-Real-IP`: проксі Railway ставить його сам. Береться останнє значення, якщо це коректна IP-адреса, інакше — адреса з'єднання. `X-Forwarded-For` не використовується: з `--forwarded-allow-ips '*'` uvicorn бере його крайній лівий запис, який задає клієнт. Код — `client_ip`, логіка однакова (v1: `src/webinar/adapters/web/client_ip.py`; шаблон: `src/app/adapters/web/client_ip.py`).
 - Ідентифікатор події календаря — `UID` `webinar-2026-10-20@pythoncourse.me`, сталий і без «v1» (v1: `src/webinar/adapters/web/ics.py`, `EVENT_UID`). `/calendar.ics` v2 віддає подію з тим самим `UID`: календар, куди подію вже додали, оновить її, а не створить другу.
 - Подія заняття — лише у v2: `/calendar/lesson.ics`, `UID` `lesson-{YYYY-MM-DD}@pythoncourse.me` з датою `LESSON_START` — окрема подія на кожне заняття, `SEQUENCE` не виводиться. Подія першого заняття 28.10 мала `UID` `lesson-2026-10-26@pythoncourse.me` із `SEQUENCE:1`; вона лишається в календарях як минула й не оновлюється.
-- `UID` сталий. `SEQUENCE` збільшується, коли змінюється час або опис події: після перенесення ефіру на 21.10 v1 віддає `SEQUENCE:1` з початком 21.10, тож v2 віддає `SEQUENCE` не менший за 1. `DTSTAMP` — час створення файла (v1: `src/webinar/adapters/web/ics.py`, `build_calendar`, `dtstamp` — поточний час).
+- Подія вебінару (`/calendar.ics`): `UID` сталий. `SEQUENCE` збільшується, коли змінюється час або опис події: після перенесення ефіру на 21.10 v1 віддає `SEQUENCE:1` з початком 21.10, тож v2 віддає `SEQUENCE` не менший за 1. `DTSTAMP` — час створення файла (v1: `src/webinar/adapters/web/ics.py`, `build_calendar`, `dtstamp` — поточний час).
 
 ## 7. Переадресація
 

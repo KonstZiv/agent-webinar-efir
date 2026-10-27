@@ -84,6 +84,8 @@ LESSON_VALUE_NAMES = frozenset(
 )
 COURSE_SECTION_NUMBER = "13"
 _SENTENCE_END = re.compile(r"(?<=\.) ")
+# «: {lesson_weekday}, {lesson_date_short}, {lesson_start} за Києвом» up to the next «;» (1.4)
+_LESSON_CLAUSE = re.compile(r":[^;:]*\{lesson_[^;]*(?=;)")
 COURSE_FIRST_SCREEN = "13.1"
 COURSE_FORM = "13.2"
 COURSE_HOW = "13.3"
@@ -356,7 +358,9 @@ def _fill(
         return values.get(name, match.group(0))
 
     def filled(line: str) -> str:
-        if drop and "{lesson_" in line:
+        if drop and number == BENEFITS_SECTION:
+            line = _LESSON_CLAUSE.sub("", line)  # only the date goes; the rest of the item stays
+        elif drop and "{lesson_" in line:
             line = " ".join(s for s in _SENTENCE_END.split(line) if "{lesson_" not in s)
         return _VALUE.sub(value, line)
 

@@ -506,7 +506,7 @@ def test_course_page_follows_lesson_start(make_settings: SettingsFactory) -> Non
 
 # The lesson after the first one: a Monday, 02.11.2026.
 NEXT_LESSON = {"LESSON_START": "2026-11-02T19:00", "LESSON_END": "2026-11-02T21:00"}
-LESSON_SECTIONS = frozenset({"1.7", "1.8", "2", "3", "4", "6.2", "11", "13", "13.1"})
+LESSON_SECTIONS = frozenset({"1.4", "1.7", "1.8", "2", "3", "4", "6.2", "11", "13", "13.1"})
 
 
 def test_lesson_values_stand_only_where_the_site_puts_them() -> None:
@@ -530,9 +530,14 @@ def test_the_landing_follows_lesson_start(make_settings: SettingsFactory, mode: 
     shown = page.find("main").text()
 
     assert "Понеділок, 02.11.2026, 19:00 за Києвом; Microsoft Teams." in shown
-    texts = copy.block_texts("1.7", mode, text) + first_screen_texts(mode)
+    texts = (
+        copy.block_texts("1.4", mode, text)
+        + copy.block_texts("1.7", mode, text)
+        + first_screen_texts(mode)
+    )
     assert [unit for unit in texts if unit not in shown] == []
-    assert "28.10.2026" not in shown.replace("середа, 28.10.2026", "")  # 1.4 keeps its own date
+    assert "на найближче заняття курсу: понеділок, 02.11.2026, 19:00 за Києвом;" in shown
+    assert "28.10.2026" not in shown
     assert "{lesson_" not in shown
 
 
@@ -555,6 +560,8 @@ def test_the_landing_without_lesson_start_shows_no_value(
     assert response.status_code == 200
     assert "{lesson_" not in response.text
     assert "Курс стартував 28 жовтня" in response.text
+    # 1.4 loses only the part with the date, as 1.7 does.
+    assert "на найближче заняття курсу; Microsoft Teams. У листі — перехід" in response.text
 
 
 @pytest.mark.parametrize("mode", sorted(MODES))
