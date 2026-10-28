@@ -22,30 +22,37 @@ ROOT = Path(__file__).resolve().parents[2]
 MIGRATIONS = ROOT / "src" / "app" / "adapters" / "db" / "migrations"
 REQUIREMENTS = ROOT / "docs" / "requirements.md"
 TABLES = ("participants", "emails", "link_tokens", "clicks")
+# Revision 0003 (requirements, section 9а): its columns are checked in tests/checkin/.
+CHECKIN_TABLES = ("participant_groups", "checkins", "attendance")
 
 
-def test_history_is_0001_then_0002() -> None:
+def test_history_is_0001_then_0002_then_0003() -> None:
     script = ScriptDirectory.from_config(Config(str(ALEMBIC_INI)))
 
-    assert [revision.revision for revision in script.walk_revisions()] == ["0002", "0001"]
-    assert script.get_heads() == ["0002"]
+    assert [revision.revision for revision in script.walk_revisions()] == ["0003", "0002", "0001"]
+    assert script.get_heads() == ["0003"]
 
 
-def test_versions_directory_holds_the_two_revisions() -> None:
+def test_versions_directory_holds_the_three_revisions() -> None:
     assert sorted(path.name for path in (MIGRATIONS / "versions").glob("*.py")) == [
         "0001_initial.py",
         "0002_v2_model.py",
+        "0003_checkin.py",
     ]
 
 
-def test_metadata_holds_the_four_tables_and_the_naming_convention() -> None:
-    assert sorted(Base.metadata.tables) == sorted(TABLES)
+def test_metadata_holds_the_tables_and_the_naming_convention() -> None:
+    assert sorted(Base.metadata.tables) == sorted((*TABLES, *CHECKIN_TABLES))
     assert Base.metadata.naming_convention == NAMING_CONVENTION
 
 
 def test_upgrade_head_builds_the_model(migrated_engine: Engine) -> None:
     with migrated_engine.connect() as connection:
-        assert set(inspect(connection).get_table_names()) == {*TABLES, "alembic_version"}
+        assert set(inspect(connection).get_table_names()) == {
+            *TABLES,
+            *CHECKIN_TABLES,
+            "alembic_version",
+        }
         assert compare_metadata(MigrationContext.configure(connection), Base.metadata) == []
 
 
@@ -69,6 +76,7 @@ def test_columns_follow_the_requirements(migrated_engine: Engine) -> None:
             for column in items
         )
         for table, items in columns.items()
+        if table in TABLES
     }
 
 

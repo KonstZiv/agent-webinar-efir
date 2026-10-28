@@ -8,9 +8,17 @@ statistics count the failed invitations only, those the operator's retry sends.
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import ColumnElement, Engine, and_, func, or_, select
+from sqlalchemy import ColumnElement, Engine, and_, func, or_, select, text
+from sqlalchemy.dialects.postgresql import aggregate_order_by
+from sqlalchemy.orm import aliased
 
-from app.adapters.db.models import EmailRecord, Participant
+from app.adapters.db.models import (
+    Attendance,
+    Checkin,
+    EmailRecord,
+    Participant,
+    ParticipantGroup,
+)
 from app.adapters.db.transaction import transaction
 from app.core.extras.ports import Counts, ExportRow, Stats
 
@@ -69,6 +77,39 @@ class SqlReportStore:
         )
 
     def export_rows(self) -> list[ExportRow]:
+        invited = aliased(Participant)
+        referrals = (
+            select(func.count())
+            .select_from(invited)
+            .where(invited.referred_by == Participant.id)
+            .scalar_subquery()
+        )
+        groups = (
+            select(
+                func.coalesce(
+                    func.array_agg(
+                        aggregate_order_by(ParticipantGroup.group_code, ParticipantGroup.group_code)
+                    ),
+                    text("ARRAY[]::varchar[]"),
+                )
+            )
+            .where(ParticipantGroup.participant_id == Participant.id)
+            .scalar_subquery()
+        )
+        attended = (
+            select(
+                func.coalesce(
+                    func.array_agg(
+                        aggregate_order_by(Checkin.lesson_date.distinct(), Checkin.lesson_date)
+                    ),
+                    text("ARRAY[]::date[]"),
+                )
+            )
+            .select_from(Attendance)
+            .join(Checkin, Checkin.id == Attendance.checkin_id)
+            .where(Attendance.participant_id == Participant.id)
+            .scalar_subquery()
+        )
         statement = select(
             Participant.email,
             Participant.registered_at,
@@ -80,6 +121,19 @@ class SqlReportStore:
             Participant.utm_medium,
             Participant.utm_campaign,
             Participant.utm_content,
+            Participant.ref_code,
+            referrals.label("referrals"),
+            groups.label("groups"),
+            attended.label("attended"),
         ).order_by(Participant.registered_at, Participant.id)
         with transaction(self._engine, "export participants") as session:
-            return [ExportRow(**row._asdict()) for row in session.execute(statement)]
+            return [
+                ExportRow(
+                    **{
+                        **row._asdict(),
+                        "groups": tuple(row.groups),
+                        "attended": tuple(row.attended),
+                    }
+                )
+                for row in session.execute(statement)
+            ]
