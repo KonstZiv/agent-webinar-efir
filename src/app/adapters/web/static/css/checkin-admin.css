@@ -1,0 +1,118 @@
+/* The slice «відмітка присутності»: the teacher's page /admin/checkin. The screen of the mark is
+   shown in Teams, so the code is large; the colours come from the tokens of site.css. */
+
+.checkin-admin {
+  padding: 32px var(--side) 8px;
+}
+
+.checkin-admin [hidden] {
+  display: none !important;
+}
+
+.checkin-admin__panel {
+  display: grid;
+  gap: 16px;
+  max-width: 640px;
+  margin: 0 auto 24px;
+}
+
+.checkin-admin__title {
+  margin: 0;
+  font: 800 26px/1.2 var(--font);
+}
+
+.checkin-admin__field {
+  display: grid;
+  gap: 6px;
+}
+
+.checkin-admin__label {
+  font: 700 16px/1.4 var(--font);
+}
+
+.checkin-admin__input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 2px solid var(--line-2);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.5 var(--font);
+}
+
+.checkin-admin__input:focus-visible {
+  border-color: var(--accent);
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.checkin-admin__hint {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.checkin-admin__error {
+  margin: 0 auto 16px;
+  max-width: 640px;
+  color: #b3261e; /* 6.5:1 on white */
+  font-weight: 700;
+}
+
+.checkin-admin__button {
+  min-height: 48px;
+  padding: 10px 20px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--bg);
+  font: 700 16px/1.4 var(--font);
+  cursor: pointer;
+}
+
+.checkin-admin__button--quiet {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.checkin-admin__button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.checkin-admin__screen {
+  text-align: center;
+}
+
+.checkin-admin__screen p {
+  margin: 0;
+}
+
+.checkin-admin__group {
+  font: 700 28px/1.3 var(--font);
+}
+
+.checkin-admin__code {
+  font: 800 clamp(72px, 22vw, 168px) / 1.1 var(--mono);
+  letter-spacing: 0.12em;
+}
+
+.checkin-admin__where {
+  font-size: 20px;
+}
+
+.checkin-admin__countdown {
+  font: 700 32px/1.3 var(--font);
+  font-variant-numeric: tabular-nums;
+}
+
+.checkin-admin__counter {
+  font: 700 24px/1.3 var(--font);
+}
+
+.checkin-admin__questions {
+  margin: 0;
+  padding-left: 24px;
+}

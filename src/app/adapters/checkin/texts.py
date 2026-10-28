@@ -4,6 +4,7 @@ A missing part stops the application, as a missing legal text does. The text of 
 an unknown address holds a link in Markdown, ``[text](/path)``; it becomes a safe ``<a>``.
 """
 
+import dataclasses
 import re
 from dataclasses import dataclass
 from datetime import date
@@ -65,7 +66,6 @@ class CheckinTexts:
     title: str
     intro: str
     code_label: str
-    code_placeholder: str
     email_label: str
     email_placeholder: str
     email_hint: str
@@ -150,7 +150,6 @@ def load_texts(docs_dir: Path) -> CheckinTexts:
         title=_need(page, "Заголовок", where),
         intro=_need(page, "Вступ", where),
         code_label=_need(fields, "Поле код: підпис", where),
-        code_placeholder=_need(fields, "Поле код: підказка в полі", where),
         email_label=_need(fields, "Поле пошти: підпис", where),
         email_placeholder=_need(fields, "Поле пошти: підказка в полі", where),
         email_hint=_need(fields, "Поле пошти: пояснення під полем", where),
@@ -169,4 +168,125 @@ def load_texts(docs_dir: Path) -> CheckinTexts:
         },
         tag_title=_need(tags, "title", TAGS_SECTION),
         tag_description=_need(tags, "description", TAGS_SECTION),
+    )
+
+
+ADMIN_SECTION = "14.4"
+_BOLD = re.compile(r"^\*\*(.+?):\*\*\s*(.*)$")
+
+
+@dataclass(frozen=True, slots=True)
+class AdminTexts:
+    """Texts of ``/admin/checkin`` (docs/copy.md, 14.4), verbatim.
+
+    The ones with values (``{group}``, ``{code}``, ``{time}``…) are put in by the script; the
+    host of the site and the channel are put in here, by ``for_site``.
+    """
+
+    tag_title: str
+    login_title: str
+    token_label: str
+    token_hint: str
+    login_button: str
+    token_rejected: str
+    start_title: str
+    group_label: str
+    group_hint: str
+    minutes_label: str
+    start_button: str
+    group_invalid: str
+    minutes_invalid: str
+    screen_group: str
+    screen_code: str
+    screen_site: str
+    screen_telegram: str
+    screen_countdown: str
+    screen_counter: str
+    close_button: str
+    not_posted: str
+    summary_title: str
+    summary_count: str
+    summary_ratings: str
+    questions_button: str
+    no_questions: str
+    new_button: str
+    network_error: str
+
+    def for_site(self, site_host: str, channel: str) -> AdminTexts:
+        """The texts with the host of the site and the channel put in."""
+        return dataclasses.replace(
+            self,
+            screen_site=self.screen_site.replace("{site_host}", site_host),
+            screen_telegram=self.screen_telegram.replace("{channel}", channel),
+        )
+
+    def script_texts(self) -> dict[str, str]:
+        """The texts the script puts values into, by the names it uses."""
+        return {
+            "token_rejected": self.token_rejected,
+            "group_invalid": self.group_invalid,
+            "minutes_invalid": self.minutes_invalid,
+            "group": self.screen_group,
+            "code": self.screen_code,
+            "countdown": self.screen_countdown,
+            "counter": self.screen_counter,
+            "summary_count": self.summary_count,
+            "summary_ratings": self.summary_ratings,
+            "questions_button": self.questions_button,
+            "no_questions": self.no_questions,
+            "network_error": self.network_error,
+        }
+
+
+def _bold_parts(lines: list[str]) -> dict[str, dict[str, str]]:
+    """Table rows of a section by the bold line above them; its own text under the key «»."""
+    found: dict[str, dict[str, str]] = {}
+    part = ""
+    for line in lines:
+        text = line.strip()
+        if bold := _BOLD.match(text):
+            part = bold.group(1)
+            found[part] = {"": bold.group(2).strip()}
+        elif (row := _ROW.match(text)) and not set(row.group(1)) <= set(":- "):
+            found.setdefault(part, {})[row.group(1).strip("` ")] = row.group(2).strip()
+    return found
+
+
+def load_admin_texts(docs_dir: Path) -> AdminTexts:
+    """The texts of the teacher's page, from ``docs_dir/copy.md``."""
+    lines = _read(docs_dir / COPY_FILE).splitlines()
+    parts = _bold_parts(_section(lines, ADMIN_SECTION))
+
+    def need(part: str, label: str) -> str:
+        return _need(parts.get(part, {}), label, f"{ADMIN_SECTION} «{part}»")
+
+    return AdminTexts(
+        tag_title=need("Службові теги", "title"),
+        login_title=need("Вхід", "Заголовок"),
+        token_label=need("Вхід", "Поле токена: підпис"),
+        token_hint=need("Вхід", "Поле токена: пояснення"),
+        login_button=need("Вхід", "Кнопка"),
+        token_rejected=need("Вхід", "Токен не підходить"),
+        start_title=need("Старт", "Заголовок"),
+        group_label=need("Старт", "Поле групи: підпис"),
+        group_hint=need("Старт", "Поле групи: пояснення"),
+        minutes_label=need("Старт", "Поле тривалості: підпис"),
+        start_button=need("Старт", "Кнопка"),
+        group_invalid=need("Старт", "Група неправильна або порожня"),
+        minutes_invalid=need("Старт", "Тривалість поза межами"),
+        screen_group=need("Екран відмітки", "Група"),
+        screen_code=need("Екран відмітки", "Код"),
+        screen_site=need("Екран відмітки", "Сайт"),
+        screen_telegram=need("Екран відмітки", "Telegram"),
+        screen_countdown=need("Екран відмітки", "Відлік"),
+        screen_counter=need("Екран відмітки", "Лічильник"),
+        close_button=need("Екран відмітки", "Кнопка"),
+        not_posted=need("Екран відмітки", "Пост не опубліковано"),
+        summary_title=need("Підсумок", "Заголовок"),
+        summary_count=need("Підсумок", "Кількість"),
+        summary_ratings=need("Підсумок", "Оцінки"),
+        questions_button=need("Підсумок", "Кнопка запитань"),
+        no_questions=need("Підсумок", "Запитань немає"),
+        new_button=need("Підсумок", "Кнопка"),
+        network_error=need("Збій мережі або сервера", ""),
     )

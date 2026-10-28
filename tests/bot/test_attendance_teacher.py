@@ -7,6 +7,7 @@ import pytest
 
 from app.core.ports import MessengerUnavailable
 from tests.bot.attendance import (
+    BOT_USERNAME,
     CHOOSE,
     FORBIDDEN,
     GROUP,
@@ -53,15 +54,15 @@ def test_checkin_opens_a_check_in_of_the_group_for_today_and_posts_it(site: BotS
 
     [row] = checkins(site)
     assert (row.group_code, str(row.lesson_date)) == (GROUP, "2026-10-21")  # today in Kyiv
-    assert (row.opened_at, row.closes_at) == (NOW, NOW + timedelta(minutes=20))
+    assert (row.opened_at, row.closes_at) == (NOW, NOW + timedelta(minutes=10))  # a break
     [channel_post, reply] = site.sent
     assert channel_post.chat_id == CHANNEL
-    assert channel_post.text == post(GROUP, 20)
+    assert channel_post.text == post(GROUP, 10)
     assert labels(channel_post) == POST_BUTTONS
-    assert len(channel_post.buttons) == 1  # one row
-    press, on_site = buttons(channel_post)
-    assert press.callback_data == f"checkin:{row.id}" and press.url is None
-    assert on_site.url == link(row.code) and on_site.callback_data is None
+    assert len(channel_post.buttons) == 1  # one row, one button
+    [open_bot] = buttons(channel_post)
+    assert open_bot.url == f"https://t.me/{BOT_USERNAME}" and open_bot.callback_data is None
+    assert row.code not in channel_post.text  # the code is on the teacher's screen only
     assert reply.chat_id == TEACHER.user_id
     assert reply.text == opened(row)
     assert link(row.code) in reply.text
@@ -94,7 +95,7 @@ def test_the_date_of_the_lesson_is_today_in_kyiv_not_in_utc(
 
     [row] = checkins(site)
     assert str(row.lesson_date) == "2026-10-22"
-    assert site.sent[0].text == post(GROUP, 20, "22 жовтня")
+    assert site.sent[0].text == post(GROUP, 10)
 
 
 @pytest.mark.parametrize("window", ["1", "180"])
@@ -253,8 +254,8 @@ def test_the_button_of_a_group_opens_its_check_in_like_the_command(site: BotSite
     assert response.status_code == 200
     first, second = checkins(site)
     assert second.group_code == GROUP
-    assert second.closes_at - second.opened_at == timedelta(minutes=20)
-    assert [message.text for message in site.sent] == [post(GROUP, 20), opened(second)]
+    assert second.closes_at - second.opened_at == timedelta(minutes=10)
+    assert [message.text for message in site.sent] == [post(GROUP, 10), opened(second)]
     assert len(site.messenger.answered) == 1  # the spinner of the button stops
 
 

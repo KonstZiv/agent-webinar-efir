@@ -16,6 +16,7 @@ from app.adapters.db.models import Attendance, Checkin, ParticipantGroup
 from app.core.entities import TelegramAccount
 from tests import copy_oracle as copy
 from tests.bot.helpers import SITE_URL, BotSite, message_update
+from tests.conftest import BOT_ENV
 from tests.fakes import WEBINAR_START
 
 TEACHER = TelegramAccount(777000111, "teacher_name")
@@ -45,7 +46,9 @@ def texts() -> dict[str, list[str]]:
 ROWS = texts()
 POST_SECTION = copy.section("14.3", copy.raw_copy_text())
 POST_TEXT = copy.one(POST_SECTION, "Текст")
-POST_BUTTONS = tuple(label.strip() for label in copy.one(POST_SECTION, "Кнопки").split("·"))
+POST_BUTTONS = (copy.one(POST_SECTION, "Кнопка"),)
+BOT_USERNAME = BOT_ENV["TELEGRAM_BOT_USERNAME"]
+SITE_HOST = SITE_URL.partition("://")[2]
 
 
 def say(situation: str) -> str:
@@ -56,10 +59,9 @@ def say(situation: str) -> str:
 FORBIDDEN = say("Не адмін або змінну не задано")
 CHOOSE = say("/checkin без аргументів, є відомі групи")
 USAGE = say("/checkin з помилкою або без відомих груп")
-MARKED = say("Відмічено")
 ALREADY_MARKED = say("Уже відмічені")
-NOT_LINKED = say("Telegram не прив'язано")
-WINDOW_CLOSED = say("Вікно закрите")
+CODE_INVALID = say("Код не підходить")
+NOT_LINKED = say("Telegram не прив'язано").replace("{site_host}", SITE_HOST)
 NOT_WRITTEN = say("Не вдалося записати")
 NOT_INSTALLED = say("Зріз відмітки не підключено")
 QUESTION_ACCEPTED = say("Запитання прийнято")
@@ -69,20 +71,21 @@ NO_OPEN = say("/checkin_close без відкритого")
 NO_CHECKINS = say("/checkin_report без чек-інів")
 
 
-def after_mark(lesson_day_month: str) -> str:
-    return say("Після відмітки").replace("{lesson_day_month}", lesson_day_month)
+def marked_reply(group: str | None = GROUP, lesson_day_month: str = "21 жовтня") -> str:
+    """The answer «Відмічено» to a code, with the group and the day of the check-in."""
+    return (
+        say("Відмічено")
+        .replace("{group}", group or "—")
+        .replace("{lesson_day_month}", lesson_day_month)
+    )
 
 
 def rated(rating: int) -> str:
     return say("Оцінку прийнято").replace("{rating}", str(rating))
 
 
-def post(group: str, window: int, lesson_day_month: str = "21 жовтня") -> str:
-    return (
-        POST_TEXT.replace("{group}", group)
-        .replace("{lesson_day_month}", lesson_day_month)
-        .replace("{window}", str(window))
-    )
+def post(group: str, window: int) -> str:
+    return POST_TEXT.replace("{group}", group).replace("{window}", str(window))
 
 
 def link(code: str) -> str:
@@ -93,7 +96,7 @@ def opened(
     checkin: Checkin,
     *,
     posted: bool = True,
-    closes_at: str = "19:20",
+    closes_at: str = "19:10",
     lesson_date: str = "21.10.2026",
 ) -> str:
     published = "Чек-ін відкрито, пост опубліковано"
@@ -109,7 +112,7 @@ def opened(
     )
 
 
-def already_open(checkin: Checkin, closes_at: str = "19:20") -> str:
+def already_open(checkin: Checkin, closes_at: str = "19:10") -> str:
     return (
         say("Є відкритий чек-ін")
         .replace("{id}", str(checkin.id))

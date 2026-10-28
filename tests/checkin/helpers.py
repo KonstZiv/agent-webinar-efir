@@ -33,12 +33,17 @@ class Site:
         return self.client.get(path, headers=ADMIN)
 
     def open(self, **body: object) -> dict[str, object]:
-        """Open a check-in through the admin API; its JSON."""
+        """Open a check-in through the admin API; its JSON without ``posted``.
+
+        Two open check-ins of one group are refused (409): a test that wants several passes
+        another ``group`` or closes the first.
+        """
         response = self.admin_post(
             "/admin/checkins", {"lesson_date": LESSON, "group": GROUP, "window_minutes": 20, **body}
         )
         assert response.status_code == 201
         found: dict[str, object] = response.json()
+        found.pop("posted")
         return found
 
     def mark(

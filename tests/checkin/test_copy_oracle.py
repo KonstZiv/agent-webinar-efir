@@ -24,10 +24,12 @@ def test_the_page_shows_the_texts_of_section_14(site: Site) -> None:
         FIELDS["Запитання: підпис"],
     ]
     assert block.find("legend").text() == FIELDS["Оцінка: підпис"]
-    code_hint = block.find("input", name="code").attrs["placeholder"]
+    assert "Поле код: підказка в полі" not in FIELDS  # the example confused people with a real code
+    assert "placeholder" not in block.find("input", name="code").attrs
     email_hint = block.find("input", name="email").attrs["placeholder"]
-    assert code_hint == FIELDS["Поле код: підказка в полі"]
     assert email_hint == FIELDS["Поле пошти: підказка в полі"]
+    assert "з екрана тренера" in SHOWN["intro"] and "слайд" not in SHOWN["intro"]
+    assert FIELDS["Поле код: підпис"] == "Код з екрана тренера"
     hint = block.find("p", class_="checkin__hint").text()
     assert hint == FIELDS["Поле пошти: пояснення під полем"]
     assert block.find("button").text() == FIELDS["Кнопка"]

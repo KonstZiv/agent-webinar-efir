@@ -361,5 +361,5 @@ def test_the_texts_are_found_in_the_copy() -> None:
     shown_texts, fields, errors = page_texts()
 
     assert shown_texts["title"] == "Відмітитись на занятті"
-    assert len(fields) == 10 and len(errors) == 8
+    assert len(fields) == 9 and len(errors) == 8  # the code field has no hint in it any more
     assert LESSON == "2026-11-02"

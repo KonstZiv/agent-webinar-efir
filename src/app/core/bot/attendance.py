@@ -2,7 +2,7 @@
 
 Texts: docs/copy.md, section 14.3 (``app.core.bot.attendance_replies``). The scenarios belong to
 the slice «відмітка присутності»; the bot finds them by a key at the moment of use
-(``attendance``) and, without them, answers «Недоступно» to a button and «Команда недоступна» to
+(``attendance``) and, without them, answers «Недоступно» to a code and «Команда недоступна» to
 a command. Only ``TELEGRAM_ADMIN_USER_ID`` gives commands; any other person, and everyone when
 the variable is not set, gets the same refusal without details.
 
@@ -15,13 +15,13 @@ port and are answered with «Не вдалося записати».
 import logging
 import re
 from collections.abc import Callable
-from datetime import date
 
 from app.core.bot import attendance_replies as texts
+from app.core.bot.announce import CheckinPost
 from app.core.bot.commands import (
     AttendanceCommand,
+    Code,
     PickGroup,
-    Press,
     Question,
     Rate,
     TeacherCommand,
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 GROUP_PATTERN = r"[a-z0-9-]{2,32}"  # a group code, as the attendance stores it
 GROUP = re.compile(GROUP_PATTERN)
 _MINUTES = re.compile(r"[0-9]{1,3}")
-DEFAULT_MINUTES = 20
+DEFAULT_MINUTES = 10  # the length of a break
 MIN_MINUTES, MAX_MINUTES = 1, 180
 KNOWN_GROUPS = 8  # the buttons of «Оберіть групу»
 
@@ -53,15 +53,16 @@ class AttendanceDialog:
         clock: Clock,
         attendance: Callable[[], AttendanceViaTelegram | None],
         admin_user_id: int | None,
-        channel: str,
+        announcer: CheckinPost,
         site_url: str,
     ) -> None:
         self._messenger = messenger
         self._clock = clock
         self._attendance = attendance
         self._admin_user_id = admin_user_id
-        self._channel = channel
+        self._announcer = announcer
         self._site_url = site_url
+        self._site_host = site_url.partition("://")[2] or site_url
 
     def handle(self, command: AttendanceCommand) -> str:
         match command:
@@ -69,8 +70,8 @@ class AttendanceDialog:
                 return self._teacher(command)
             case PickGroup():
                 return self._pick(command)
-            case Press():
-                return self._press(command)
+            case Code():
+                return self._code(command)
             case Rate():
                 return self._rate(command)
             case Question():
@@ -152,7 +153,7 @@ class AttendanceDialog:
                 ),
             )
             return "open_exists"
-        posted = self._post(today, opened.id, opened.code, group, minutes)
+        posted = self._announcer.announce(opened.id, opened.code, group, today, minutes)
         link = texts.checkin_link(self._site_url, opened.code)
         reply = texts.OPENED if posted else texts.OPENED_NOT_POSTED
         self._say(
@@ -167,20 +168,6 @@ class AttendanceDialog:
             ),
         )
         return "opened" if posted else "opened_not_posted"
-
-    def _post(self, today: date, checkin_id: int, code: str, group: str, minutes: int) -> bool:
-        """The post of the check-in in the channel; ``False`` when Telegram refuses it."""
-        text = texts.POST.format(
-            group=group, lesson_day_month=texts.day_month(today), window=minutes
-        )
-        try:
-            self._messenger.send_message(
-                self._channel, text, texts.post_buttons(self._site_url, checkin_id, code)
-            )
-        except MessengerUnavailable as error:
-            logger.warning("Check-in post not published: %s", type(error).__name__)
-            return False
-        return True
 
     def _close(self, service: AttendanceViaTelegram, chat_id: int, group: str | None) -> str:
         if group is not None and not GROUP.fullmatch(group):
@@ -221,28 +208,31 @@ class AttendanceDialog:
 
     # --- the student ------------------------------------------------------------------------
 
-    def _press(self, command: Press) -> str:
+    def _code(self, command: Code) -> str:
+        """A code from the teacher's screen: the person is marked, if it fits an open check-in."""
         service = self._attendance()
         if service is None:
-            self._answer(command.callback_id, texts.NOT_INSTALLED)
+            self._say(command.chat_id, texts.NOT_INSTALLED)
             return "unavailable"
-        marked = service.mark(command.checkin_id, command.user_id)
+        marked = service.mark_code(command.code, command.user_id)
         match marked.status:
             case "marked":
-                self._answer(command.callback_id, texts.MARKED)
                 self._say(
-                    command.user_id,
-                    texts.AFTER_MARK.format(lesson_day_month=texts.day_month(marked.lesson_date)),
-                    texts.rating_buttons(command.checkin_id),
+                    command.chat_id,
+                    texts.MARKED.format(
+                        group=marked.group or texts.NO_GROUP,
+                        lesson_day_month=texts.day_month(marked.lesson_date),
+                    ),
+                    texts.rating_buttons(marked.checkin_id),
                 )
             case "already":
-                self._answer(command.callback_id, texts.ALREADY_MARKED)
+                self._say(command.chat_id, texts.ALREADY_MARKED)
             case "not_linked":
-                self._answer(command.callback_id, texts.NOT_LINKED, show_alert=True)
+                self._say(command.chat_id, texts.NOT_LINKED.format(site_host=self._site_host))
             case "closed":
-                self._answer(command.callback_id, texts.WINDOW_CLOSED, show_alert=True)
+                self._say(command.chat_id, texts.CODE_INVALID)
             case _:
-                self._answer(command.callback_id, texts.NOT_WRITTEN)
+                self._say(command.chat_id, texts.NOT_WRITTEN)
         return marked.status
 
     def _rate(self, command: Rate) -> str:

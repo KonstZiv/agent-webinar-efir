@@ -112,7 +112,7 @@ class Attendance:
         raise StorageError("no free check-in code")
 
     def open_in_group(
-        self, lesson_date: date, group: str, window_minutes: int
+        self, lesson_date: date, group: str | None, window_minutes: int
     ) -> Checkin | OpenInGroup:
         """Like ``open``, but a group with an open check-in gets no second one (it is returned)."""
         now = self._clock.now()
@@ -148,15 +148,18 @@ class Attendance:
         """Group codes the teacher can pick, the freshest first."""
         return self._store.known_groups(limit)
 
-    def mark_telegram(self, checkin_id: int, tg_user_id: int) -> Telegram:
-        """Mark the participant with this Telegram on the check-in, if its window is open."""
+    def mark_telegram_code(self, code: str, tg_user_id: int) -> Telegram:
+        """Mark the participant with this Telegram on the open check-in with ``code``.
+
+        The Telegram is looked up first: a person with none learns nothing about the codes.
+        """
         now = self._clock.now()
-        checkin = self._store.get(checkin_id)
-        if checkin is None or not checkin.is_open(now):
-            return Telegram(Verdict.CLOSED)
         participant = self._participants.by_telegram(tg_user_id)
         if participant is None:
-            return Telegram(Verdict.NOT_LINKED, checkin)
+            return Telegram(Verdict.NOT_LINKED)
+        checkin = self._store.find_open(normalize_code(code), now)
+        if checkin is None:
+            return Telegram(Verdict.CLOSED)
         added = self._store.mark(checkin.id, participant.id, SOURCE_TELEGRAM, None, None, now)
         return Telegram(Verdict.MARKED if added else Verdict.ALREADY, checkin)
 

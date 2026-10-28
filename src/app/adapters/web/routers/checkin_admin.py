@@ -12,9 +12,9 @@ from fastapi import APIRouter, Depends, Path
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from app.adapters.checkin.keys import ATTENDANCE
+from app.adapters.checkin.keys import ANNOUNCER, ATTENDANCE
 from app.adapters.web.admin_auth import AdminDep
-from app.adapters.web.dependencies import service
+from app.adapters.web.dependencies import ContainerDep, service
 from app.adapters.web.headers import SERVICE
 from app.core.checkin.model import (
     DEFAULT_WINDOW_MINUTES,
@@ -23,6 +23,7 @@ from app.core.checkin.model import (
     MIN_WINDOW_MINUTES,
     Checkin,
     Entry,
+    OpenInGroup,
 )
 from app.core.checkin.service import Attendance
 from app.core.ports import StorageError
@@ -77,12 +78,31 @@ def _entry(entry: Entry) -> dict[str, object]:
 
 
 @router.post("/admin/checkins")
-def open_checkin(_: AdminDep, body: OpenCheckin, attendance: AttendanceDep) -> JSONResponse:
+def open_checkin(
+    _: AdminDep, body: OpenCheckin, attendance: AttendanceDep, container: ContainerDep
+) -> JSONResponse:
+    """Open a check-in and post it in the channel.
+
+    A group with an open check-in gets none (409 with the open one). ``posted``: ``True`` —
+    published, ``False`` — Telegram refused (the check-in stands), ``None`` — no bot.
+    """
     try:
-        checkin = attendance.open(body.lesson_date, body.group, body.window_minutes)
+        found = attendance.open_in_group(body.lesson_date, body.group, body.window_minutes)
     except StorageError:
         return _unavailable()
-    return JSONResponse(_checkin(checkin), status_code=201, headers=SERVICE)
+    if isinstance(found, OpenInGroup):
+        return JSONResponse(
+            {**_checkin(found.checkin), "status": "open_exists"}, status_code=409, headers=SERVICE
+        )
+    announcer = container.services.find(ANNOUNCER)
+    posted = (
+        None
+        if announcer is None
+        else announcer.announce(
+            found.id, found.code, found.group, found.lesson_date, body.window_minutes
+        )
+    )
+    return JSONResponse({**_checkin(found), "posted": posted}, status_code=201, headers=SERVICE)
 
 
 @router.post("/admin/checkins/{checkin_id}/close")

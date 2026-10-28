@@ -121,7 +121,7 @@ class ReportSummary(Protocol):
 
 
 class Pressed(Protocol):
-    """The answer to «Я на занятті», to a rating and to a question."""
+    """The answer to a code, to a rating and to a question."""
 
     @property
     def status(
@@ -141,6 +141,13 @@ class Pressed(Protocol):
 
     @property
     def lesson_date(self) -> date: ...
+
+    # The check-in the answer is about (a code that fits); ``group`` is ``None`` for one without.
+    @property
+    def checkin_id(self) -> int: ...
+
+    @property
+    def group(self) -> str | None: ...
 
 
 class AttendanceViaTelegram(Protocol):
@@ -162,9 +169,10 @@ class AttendanceViaTelegram(Protocol):
         """The report of the latest check-in of ``group`` (of any group if ``None``)."""
         ...
 
-    def mark(self, checkin_id: int, tg_user_id: int) -> Pressed:
-        """Mark the participant with this Telegram: ``marked``, ``already``, ``not_linked``,
-        ``closed`` (the window is shut), or ``failed``."""
+    def mark_code(self, code: str, tg_user_id: int) -> Pressed:
+        """Mark the participant with this Telegram on the open check-in with ``code``:
+        ``marked``, ``already``, ``not_linked``, ``closed`` (no open check-in has the code),
+        or ``failed``."""
         ...
 
     def rate(self, checkin_id: int, tg_user_id: int, rating: int) -> Pressed:

@@ -10,11 +10,13 @@ from datetime import timedelta
 
 import pytest
 
+from app.core.bot.announce import CheckinPost
 from app.core.bot.attendance import AttendanceDialog
-from app.core.bot.commands import Press, TeacherCommand
+from app.core.bot.commands import Code, TeacherCommand
 from app.core.entities import TelegramAccount
 from app.core.ports import MessengerUnavailable
 from tests.bot.attendance import (
+    BOT_USERNAME,
     FORBIDDEN,
     GROUP,
     NOT_INSTALLED,
@@ -24,12 +26,12 @@ from tests.bot.attendance import (
     TEACHER,
     TEACHER_ENV,
     add_checkin,
-    after_mark,
     already_open,
     broken_marks,
     checkin_command,
     checkins,
     closed,
+    marked_reply,
     opened,
     post,
     rated,
@@ -53,8 +55,9 @@ type Scene = Callable[[BotSite, ParticipantFactory], None]
 SITE_URL = "https://site.example.com"
 
 
-def press(site: BotSite, checkin_id: int, account: TelegramAccount = USER) -> None:
-    site.post(callback_update(account, f"checkin:{checkin_id}", chat_type="channel"))
+def press(site: BotSite, code: str, account: TelegramAccount = USER) -> None:
+    """The student sends the code to the bot."""
+    site.post(message_update(account, code))
 
 
 def linked_and_open(site: BotSite, factory: ParticipantFactory) -> int:
@@ -65,9 +68,8 @@ def linked_and_open(site: BotSite, factory: ParticipantFactory) -> int:
 def marked(site: BotSite, factory: ParticipantFactory) -> int:
     """A marked participant; what the bot has said so far is forgotten."""
     checkin_id = linked_and_open(site, factory)
-    press(site, checkin_id)
+    press(site, "AB23")
     site.forget()
-    site.messenger.answered.clear()
     return checkin_id
 
 
@@ -76,28 +78,31 @@ def marked(site: BotSite, factory: ParticipantFactory) -> int:
 
 
 def scene_marked(site: BotSite, factory: ParticipantFactory) -> None:
-    press(site, linked_and_open(site, factory))
+    linked_and_open(site, factory)
+    press(site, "AB23")
 
 
 def scene_already(site: BotSite, factory: ParticipantFactory) -> None:
-    press(site, marked(site, factory))
+    marked(site, factory)
+    press(site, "AB23")
 
 
 def scene_not_linked(site: BotSite, factory: ParticipantFactory) -> None:
     factory("one@example.com", telegram=OTHER)
-    press(site, add_checkin(site).id)
+    add_checkin(site)
+    press(site, "AB23")
 
 
-def scene_closed(site: BotSite, factory: ParticipantFactory) -> None:
-    checkin_id = linked_and_open(site, factory)
+def scene_code_invalid(site: BotSite, factory: ParticipantFactory) -> None:
+    linked_and_open(site, factory)
     site.clock.advance(timedelta(minutes=30))
-    press(site, checkin_id)
+    press(site, "AB23")
 
 
 def scene_not_written(site: BotSite, factory: ParticipantFactory) -> None:
-    checkin_id = linked_and_open(site, factory)
+    linked_and_open(site, factory)
     with broken_marks(site):
-        press(site, checkin_id)
+        press(site, "AB23")
 
 
 def scene_rated(site: BotSite, factory: ParticipantFactory) -> None:
@@ -167,16 +172,12 @@ def scene_report_none(site: BotSite, factory: ParticipantFactory) -> None:
     checkin_command(site, "/checkin_report")
 
 
-# Rows told by ``answer_callback``; the others by a message.
-ANSWERED: dict[str, Scene] = {
+SAID: dict[str, Scene] = {
     "Відмічено": scene_marked,
     "Уже відмічені": scene_already,
+    "Код не підходить": scene_code_invalid,
     "Telegram не прив'язано": scene_not_linked,
-    "Вікно закрите": scene_closed,
     "Не вдалося записати": scene_not_written,
-}
-SAID: dict[str, Scene] = {
-    "Після відмітки": scene_marked,
     "Оцінку прийнято": scene_rated,
     "Запитання прийнято": scene_question,
     "Запитання довше за 500 знаків": scene_question_too_long,
@@ -198,26 +199,17 @@ NO_SLICE = "Зріз відмітки не підключено"
 
 def test_every_row_of_the_tables_has_a_scene() -> None:
     """A new situation in copy.md needs a test (and code) before this is green again."""
-    assert sorted([*ANSWERED, *SAID, NO_SLICE]) == sorted(ROWS)
-
-
-@pytest.mark.parametrize("situation", sorted(ANSWERED))
-def test_the_bot_answers_the_button_with_the_text_of_the_situation(
-    bot_site_factory: BotSiteFactory, participant_factory: ParticipantFactory, situation: str
-) -> None:
-    site = bot_site_factory(messenger=Telegram(), **TEACHER_ENV)
-
-    ANSWERED[situation](site, participant_factory)
-
-    assert site.messenger.answered[-1][1] == ROWS[situation][0]
+    assert sorted([*SAID, NO_SLICE]) == sorted(ROWS)
 
 
 def with_values(situation: str, text: str, site: BotSite) -> str:
     """The text of a row with the values the scene makes: one check-in, 21.10.2026, 19:00."""
     row = checkins(site)[-1] if checkins(site) else None
     match situation:
-        case "Після відмітки":
-            return after_mark("21 жовтня")
+        case "Відмічено":
+            return marked_reply(GROUP, "21 жовтня")
+        case "Telegram не прив'язано":
+            return text.replace("{site_host}", "public-sentinel.example.com")
         case "Оцінку прийнято":
             return rated(4)
         case "Чек-ін відкрито, пост опубліковано":
@@ -289,7 +281,10 @@ def test_the_post_of_the_channel_is_the_text_of_the_section(
     [channel_post, _] = site.sent
     assert channel_post.chat_id == CHANNEL
     assert channel_post.text == post(OTHER_GROUP, 45)
-    assert labels(channel_post) == POST_BUTTONS == ("Я на занятті", "Відмітитись на сайті")
+    assert labels(channel_post) == POST_BUTTONS == ("Відмітитись",)
+    [[button]] = channel_post.buttons
+    assert button.url == f"https://t.me/{BOT_USERNAME}"
+    assert button.callback_data is None
 
 
 def dialog_without_the_slice(messenger: FakeMessenger) -> AttendanceDialog:
@@ -298,19 +293,17 @@ def dialog_without_the_slice(messenger: FakeMessenger) -> AttendanceDialog:
         clock=FixedClock(),
         attendance=lambda: None,
         admin_user_id=TEACHER.user_id,
-        channel=CHANNEL,
+        announcer=CheckinPost(messenger, CHANNEL, BOT_USERNAME),
         site_url=SITE_URL,
     )
 
 
-def test_without_the_slice_of_the_attendance_the_button_says_so() -> None:
+def test_without_the_slice_of_the_attendance_a_code_says_so() -> None:
     messenger = FakeMessenger()
 
-    dialog_without_the_slice(messenger).handle(Press(USER.user_id, "callback-1", 5))
+    dialog_without_the_slice(messenger).handle(Code(USER.user_id, USER.user_id, "AB23"))
 
-    assert messenger.answered == [("callback-1", ROWS[NO_SLICE][0])] == [
-        ("callback-1", NOT_INSTALLED)
-    ]
+    assert [message.text for message in messenger.sent] == [ROWS[NO_SLICE][0]] == [NOT_INSTALLED]
 
 
 def test_without_the_slice_of_the_attendance_the_commands_are_unavailable() -> None:
