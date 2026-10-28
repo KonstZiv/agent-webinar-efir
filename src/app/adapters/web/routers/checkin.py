@@ -1,9 +1,10 @@
 """``GET`` and ``POST /checkin``: a registered participant marks the lesson (requirements, 9а).
 
-``GET`` is the page with the form. An htmx ``POST`` gets the new ``div#checkin``: the success in
-place of the form, or the form again with the problem. A plain post without JavaScript gets the
-whole page with the same block (as ``/quiz``). Never cached or indexed; the log carries no
-address, code or question.
+``GET`` is the page with the form; ``?code=`` (the link of the post and of the chat of the lesson)
+fills in the code, when it is one, and puts the cursor on the address. An htmx ``POST`` gets the
+new ``div#checkin``: the success in place of the form, or the form again with the problem. A
+plain post without JavaScript gets the whole page with the same block (as ``/quiz``). Never
+cached or indexed; the log carries no address, code or question.
 """
 
 from typing import Annotated
@@ -16,6 +17,7 @@ from app.adapters.checkin.view import CheckinState
 from app.adapters.web.client_ip import client_ip
 from app.adapters.web.dependencies import Container, ContainerDep, service
 from app.adapters.web.headers import SERVICE
+from app.core.checkin.model import CODE_ALPHABET, CODE_LENGTH, normalize_code
 from app.core.checkin.service import Attendance, Marked, Problem
 
 router = APIRouter()
@@ -42,9 +44,21 @@ def _render(
     )
 
 
+def _prefilled(code: str) -> CheckinState:
+    """The form with the code of a link (the post, the chat of the lesson), if it is a code.
+
+    Anything else, including a code of the wrong length or outside the alphabet, is not echoed:
+    the field stays empty. The cursor goes to the address, which is all that is left to type.
+    """
+    wanted = normalize_code(code)
+    if len(wanted) == CODE_LENGTH and set(wanted) <= set(CODE_ALPHABET):
+        return CheckinState(code=wanted, autofocus_email=True)
+    return CheckinState()
+
+
 @router.get("/checkin", response_class=HTMLResponse)
-def checkin_page(request: Request, container: ContainerDep) -> HTMLResponse:
-    return _render(request, container, CheckinState(), 200)
+def checkin_page(request: Request, container: ContainerDep, code: str = "") -> HTMLResponse:
+    return _render(request, container, _prefilled(code), 200)
 
 
 @router.post("/checkin", response_class=HTMLResponse)

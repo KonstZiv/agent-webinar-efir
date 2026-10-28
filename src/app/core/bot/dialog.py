@@ -24,7 +24,8 @@ import re
 from dataclasses import dataclass
 from enum import StrEnum
 
-from app.core.bot.commands import Command, Recheck
+from app.core.bot.attendance import AttendanceDialog
+from app.core.bot.commands import ATTENDANCE_COMMANDS, Command, Recheck
 from app.core.bot.ports import MessengerRateLimited
 from app.core.bot.replies import Answer, Replies
 from app.core.entities import ChatMember, LinkToken, Participant, TelegramAccount
@@ -72,7 +73,7 @@ class Outcome:
     """What happened and what the person got last; ``str`` is the line of the log."""
 
     linking: Linking
-    answer: Answer
+    answer: Answer | str  # a label of the attendance dialog is a plain string
 
     def __str__(self) -> str:
         return f"{self.linking}, {self.answer}"
@@ -90,7 +91,9 @@ class BotDialog:
         clock: Clock,
         replies: Replies,
         channel: str,
+        attendance: AttendanceDialog,
     ) -> None:
+        self._attendance = attendance
         self._participants = participants
         self._tokens = tokens
         self._messenger = messenger
@@ -99,6 +102,8 @@ class BotDialog:
         self._channel = channel
 
     def handle(self, command: Command) -> Outcome:
+        if isinstance(command, ATTENDANCE_COMMANDS):
+            return Outcome(Linking.NONE, self._attendance.handle(command))
         if isinstance(command, Recheck):
             self._answer_button(command.callback_id)
             return Outcome(Linking.NONE, self._check(command.chat_id, command.account, True))

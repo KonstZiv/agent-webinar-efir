@@ -3,7 +3,7 @@
 import re
 import secrets
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O, 1/I
 CODE_LENGTH = 4
@@ -11,6 +11,7 @@ DEFAULT_WINDOW_MINUTES = 20
 MIN_WINDOW_MINUTES = 1
 MAX_WINDOW_MINUTES = 180
 MAX_QUESTION_LENGTH = 500
+FEEDBACK_PERIOD = timedelta(hours=24)  # a rating and a question are taken this long after closing
 RATINGS = (1, 2, 3, 4, 5)
 GROUP_CODE_PATTERN = r"[a-z0-9-]{2,32}"
 SOURCE_SITE = "site"
@@ -73,6 +74,25 @@ class Checkin:
 
     def is_open(self, now: datetime) -> bool:
         return self.opened_at <= now < self.closes_at
+
+    def takes_feedback(self, now: datetime) -> bool:
+        """Whether a rating or a question is still taken: ``FEEDBACK_PERIOD`` after closing."""
+        return now < self.closes_at + FEEDBACK_PERIOD
+
+
+@dataclass(frozen=True, slots=True)
+class OpenInGroup:
+    """The result of opening a check-in for a group that already has an open one."""
+
+    checkin: Checkin
+
+
+@dataclass(frozen=True, slots=True)
+class Mark:
+    """A participant's mark with its check-in and the question written so far."""
+
+    checkin: Checkin
+    question: str | None
 
 
 @dataclass(frozen=True, slots=True)

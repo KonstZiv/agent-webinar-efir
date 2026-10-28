@@ -289,6 +289,7 @@ class Settings(BaseSettings):
     telegram_bot_username: BotUsername = ""
     telegram_webhook_secret: WebhookSecret | None = None
     telegram_channel: ChannelName = ""
+    telegram_admin_user_id: int | None = None  # the teacher's Telegram id; none: no admin commands
     materials_slug: MaterialsSlug = ""  # empty: the materials page answers 404
     llm_enabled: bool = False
     anthropic_api_key: SecretStr | None = None

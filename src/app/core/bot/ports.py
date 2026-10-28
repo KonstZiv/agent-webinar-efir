@@ -1,8 +1,14 @@
 """What the bot adds to the shared ``Messenger`` port (``app.core.ports``)."""
 
-from typing import Protocol
+from collections.abc import Mapping, Sequence
+from datetime import date, datetime
+from typing import Literal, Protocol
 
 from app.core.ports import MessengerUnavailable
+
+# Key of the attendance scenarios for Telegram: the slice «відмітка присутності» provides them,
+# the bot only looks them up by this name and never imports that slice.
+ATTENDANCE_KEY = "checkin.telegram"
 
 
 class MessengerDown(MessengerUnavailable):
@@ -33,4 +39,138 @@ class Pause(Protocol):
 
     def stop(self) -> None:
         """End every wait at once, the current one and the next ones: the application stops."""
+        ...
+
+
+# --- the attendance, as the bot asks for it -----------------------------------------------------
+#
+# The slice «відмітка присутності» implements ``AttendanceViaTelegram``; the bot cannot import
+# its result types, so every answer is a Protocol of read-only fields that the other side meets
+# with a dataclass of its own. ``status`` tells the cases apart; the other fields mean something
+# only for the statuses that need them. Expected cases are statuses, never exceptions: ``failed``
+# is a storage failure.
+
+
+class Opened(Protocol):
+    @property
+    def status(self) -> Literal["opened", "open_exists", "failed"]: ...
+
+    # ``open_exists``: the open check-in that stands in the way.
+    @property
+    def id(self) -> int: ...
+
+    @property
+    def code(self) -> str: ...
+
+    @property
+    def group(self) -> str: ...
+
+    @property
+    def closes_at(self) -> datetime: ...
+
+
+class Closed(Protocol):
+    @property
+    def status(self) -> Literal["closed", "none", "failed"]: ...
+
+    @property
+    def id(self) -> int: ...
+
+    @property
+    def group(self) -> str | None: ...
+
+    @property
+    def closed_at(self) -> datetime: ...
+
+    @property
+    def attended(self) -> int: ...
+
+
+class ReportSummary(Protocol):
+    """A check-in with its counts and questions; no addresses."""
+
+    @property
+    def status(self) -> Literal["found", "none", "failed"]: ...
+
+    @property
+    def id(self) -> int: ...
+
+    @property
+    def lesson_date(self) -> date: ...
+
+    @property
+    def group(self) -> str | None: ...
+
+    @property
+    def attended(self) -> int: ...
+
+    @property
+    def site(self) -> int: ...
+
+    @property
+    def telegram(self) -> int: ...
+
+    @property
+    def ratings(self) -> Mapping[int, int]: ...
+
+    @property
+    def average(self) -> float | None: ...
+
+    @property
+    def questions(self) -> Sequence[str]: ...
+
+
+class Pressed(Protocol):
+    """The answer to «Я на занятті», to a rating and to a question."""
+
+    @property
+    def status(
+        self,
+    ) -> Literal[
+        "marked",
+        "already",
+        "not_linked",
+        "closed",
+        "rated",
+        "too_late",
+        "not_marked",
+        "saved",
+        "too_long",
+        "failed",
+    ]: ...
+
+    @property
+    def lesson_date(self) -> date: ...
+
+
+class AttendanceViaTelegram(Protocol):
+    """What the bot needs of the attendance; none of the methods raises for an expected case."""
+
+    def known_groups(self, limit: int) -> Sequence[str] | None:
+        """Group codes to pick from, the freshest first; ``None`` — the storage failed."""
+        ...
+
+    def open(self, lesson_date: date, group: str, window_minutes: int) -> Opened:
+        """Open a check-in of ``group``, unless it has an open one (``open_exists``)."""
+        ...
+
+    def close(self, group: str | None) -> Closed:
+        """Close the open check-in of ``group`` (the latest open of any group if ``None``)."""
+        ...
+
+    def report(self, group: str | None) -> ReportSummary:
+        """The report of the latest check-in of ``group`` (of any group if ``None``)."""
+        ...
+
+    def mark(self, checkin_id: int, tg_user_id: int) -> Pressed:
+        """Mark the participant with this Telegram: ``marked``, ``already``, ``not_linked``,
+        ``closed`` (the window is shut), or ``failed``."""
+        ...
+
+    def rate(self, checkin_id: int, tg_user_id: int, rating: int) -> Pressed:
+        """``rated``, ``too_late``, ``not_marked`` or ``failed``."""
+        ...
+
+    def ask(self, tg_user_id: int, text: str) -> Pressed:
+        """``saved``, ``too_long`` (nothing added), ``not_marked`` (ignored) or ``failed``."""
         ...

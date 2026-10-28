@@ -105,6 +105,26 @@ def test_answering_a_button() -> None:
     assert recorder.bodies == [{"callback_query_id": "callback-1"}]
 
 
+def test_a_message_to_a_channel_goes_to_its_name() -> None:
+    recorder = Recorder()
+
+    messenger(recorder).send_message("@agentic_engineers", "Пост")
+
+    assert recorder.bodies == [{"chat_id": "@agentic_engineers", "text": "Пост"}]
+
+
+def test_an_answer_with_a_text_and_an_alert() -> None:
+    recorder = Recorder()
+
+    messenger(recorder).answer_callback("callback-1", "Текст", show_alert=True)
+    messenger(recorder).answer_callback("callback-2", "Текст")
+
+    assert recorder.bodies == [
+        {"callback_query_id": "callback-1", "text": "Текст", "show_alert": True},
+        {"callback_query_id": "callback-2", "text": "Текст"},
+    ]
+
+
 @pytest.mark.parametrize(
     ("result", "member"),
     [

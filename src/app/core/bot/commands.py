@@ -1,7 +1,8 @@
 """What a person asks the bot, read from a Telegram update (``app.adapters.bot.updates``).
 
-Only private chats give commands; in them the chat id is the user's id, but the core keeps
-both, as Telegram sends them.
+Commands come from private chats; in them the chat id is the user's id, but the core keeps
+both, as Telegram sends them. The one exception is ``Press``, the button under the post of a
+check-in, which may also come from the channel.
 """
 
 from dataclasses import dataclass
@@ -27,4 +28,56 @@ class Recheck:
     callback_id: str
 
 
-type Command = Start | Recheck
+@dataclass(frozen=True, slots=True)
+class TeacherCommand:
+    """``/checkin``, ``/checkin_close`` or ``/checkin_report`` with the text after it."""
+
+    chat_id: int
+    user_id: int
+    name: str  # without the slash and the bot's name
+    arguments: str
+
+
+@dataclass(frozen=True, slots=True)
+class PickGroup:
+    """The button of a group under «Оберіть групу»: open its check-in."""
+
+    chat_id: int
+    user_id: int
+    callback_id: str
+    group: str
+
+
+@dataclass(frozen=True, slots=True)
+class Press:
+    """«Я на занятті» under the post of a check-in, in the channel or in a private chat."""
+
+    user_id: int
+    callback_id: str
+    checkin_id: int
+
+
+@dataclass(frozen=True, slots=True)
+class Rate:
+    """A rating button of the private message sent after the mark."""
+
+    chat_id: int
+    user_id: int
+    callback_id: str
+    checkin_id: int
+    rating: int
+
+
+@dataclass(frozen=True, slots=True)
+class Question:
+    """A text in a private chat that is not a command: a question to the trainer, maybe."""
+
+    chat_id: int
+    user_id: int
+    text: str
+
+
+type AttendanceCommand = TeacherCommand | PickGroup | Press | Rate | Question
+type Command = Start | Recheck | AttendanceCommand
+# The classes of ``AttendanceCommand`` for ``isinstance``, which cannot take the alias.
+ATTENDANCE_COMMANDS = (TeacherCommand, PickGroup, Press, Rate, Question)

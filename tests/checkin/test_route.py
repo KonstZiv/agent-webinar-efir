@@ -9,6 +9,7 @@ from tests.checkin.helpers import (
     CODE_INVALID,
     EMAIL_UNKNOWN,
     ERRORS,
+    HTMX,
     LESSON,
     SHOWN,
     page_texts,
@@ -33,6 +34,47 @@ def test_the_page_without_javascript_has_the_form(site: Site) -> None:
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["x-robots-tag"] == "noindex"
     assert page.find("meta", name="robots").attrs["content"] == "noindex"
+
+
+def fields(page_text: str) -> tuple[str, bool]:
+    """The value of the code field, and whether the address field has the cursor."""
+    block = parse(page_text).find("div", id="checkin")
+    return block.find("input", name="code").attrs.get("value", ""), (
+        "autofocus" in block.find("input", name="email").attrs
+    )
+
+
+@pytest.mark.parametrize("given", ["7f3k", "7F3K", " 7f3k ", "7f3K"])
+def test_a_code_in_the_link_fills_the_field_and_the_cursor_goes_to_the_address(
+    site: Site, given: str
+) -> None:
+    response = site.client.get("/checkin", params={"code": given})
+
+    assert response.status_code == 200
+    assert fields(response.text) == ("7F3K", True)
+
+
+@pytest.mark.parametrize(
+    "given",
+    ["", "<script>", "<script>alert(1)</script>", "7f3", "7f3k5", "70OI", "7f3k;", "ключ", "7F 3K"],
+)
+def test_anything_but_a_code_in_the_link_leaves_the_field_empty(site: Site, given: str) -> None:
+    response = site.client.get("/checkin", params={"code": given})
+
+    assert response.status_code == 200
+    assert fields(response.text) == ("", False)
+    assert "<script>" not in response.text and "alert(1)" not in response.text
+
+
+def test_the_page_without_a_code_is_as_it_was(site: Site) -> None:
+    assert fields(site.client.get("/checkin").text) == ("", False)
+
+
+def test_a_post_does_not_read_the_code_of_the_address(site: Site) -> None:
+    response = site.client.post("/checkin?code=7F3K", data={"code": "", "email": ""}, headers=HTMX)
+
+    assert response.status_code == 422
+    assert fields(response.text) == ("", False)
 
 
 def test_the_form_has_a_hidden_network_error_and_handlers_for_both_failures(site: Site) -> None:
