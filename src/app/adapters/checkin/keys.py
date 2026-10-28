@@ -4,6 +4,7 @@ The keys live here, not in ``app.slices.checkin``: the routes import them, and a
 must import without the slice package (the foundation's tests swap ``app.slices`` for a sample).
 """
 
+from app.adapters.checkin.telegram import TelegramAttendance
 from app.adapters.checkin.texts import CheckinTexts
 from app.core.checkin.ports import CheckinStore
 from app.core.checkin.service import Attendance
@@ -14,3 +15,5 @@ STORE = Key[CheckinStore]("checkin.store")
 ATTENDANCE = Key[Attendance]("checkin.attendance")
 RATE_LIMITER = Key[RateLimiter]("checkin.rate_limiter")
 TEXTS = Key[CheckinTexts]("checkin.texts")
+# The scenarios for the bot of Telegram; the bot finds them by this very name (``core.bot.ports``).
+TELEGRAM = Key[TelegramAttendance]("checkin.telegram")

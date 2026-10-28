@@ -22,10 +22,11 @@ import logging
 from functools import partial
 
 from app.adapters.bot import telegram
-from app.adapters.bot.keys import DIALOG, PAUSE, WORKERS
+from app.adapters.bot.keys import ATTENDANCE, DIALOG, PAUSE, WORKERS
 from app.adapters.bot.webhook import STOP_WAIT, StoppablePause, WebhookThread
 from app.adapters.bot.workers import BOT_AT_ONCE, BotWorkers
 from app.adapters.web.routers.bot import PATH
+from app.core.bot.attendance import AttendanceDialog
 from app.core.bot.dialog import BotDialog
 from app.core.bot.replies import Replies
 from app.core.bot.webhook import register_webhook
@@ -75,6 +76,14 @@ def install(setup: SliceSetup) -> None:
                 site_url=site_url, materials_url=materials_url, channel=settings.telegram_channel
             ),
             channel=settings.telegram_channel,
+            attendance=AttendanceDialog(
+                messenger=services.get(MESSENGER),
+                clock=services.get(CLOCK),
+                attendance=lambda: services.find(ATTENDANCE),
+                admin_user_id=settings.telegram_admin_user_id,
+                channel=settings.telegram_channel,
+                site_url=site_url,
+            ),
         ),
     )
 

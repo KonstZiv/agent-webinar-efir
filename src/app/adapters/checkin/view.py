@@ -33,6 +33,7 @@ class CheckinState:
     email: str = ""
     rating: str = ""
     question: str = ""
+    autofocus_email: bool = False  # the code came with the link: the address is next
     problem: str | None = None
     success: str | None = None
     feedback: bool = False

@@ -162,6 +162,16 @@ def recheck_update(
     }
 
 
+def callback_update(
+    account: TelegramAccount, data: str, *, chat_type: str = "private", chat_id: int | None = None
+) -> dict[str, Any]:
+    """Any button of the bot pressed; under a post of the channel when ``chat_type`` says so."""
+    update = recheck_update(account, data=data, chat_type=chat_type)
+    if chat_id is not None:
+        update["callback_query"]["message"]["chat"]["id"] = chat_id
+    return update
+
+
 # --- Telegram with failures ------------------------------------------------------------------
 
 
@@ -175,13 +185,15 @@ class Telegram(FakeMessenger):
     channels: list[str] = field(default_factory=list)
     calls: list[str] = field(default_factory=list)
 
-    def send_message(self, chat_id: int, text: str, buttons: Any = ()) -> None:
+    def send_message(self, chat_id: int | str, text: str, buttons: Any = ()) -> None:
         self._script("send_message")
         super().send_message(chat_id, text, buttons)
 
-    def answer_callback(self, callback_id: str, text: str | None = None) -> None:
+    def answer_callback(
+        self, callback_id: str, text: str | None = None, show_alert: bool = False
+    ) -> None:
         self._script("answer_callback")
-        super().answer_callback(callback_id, text)
+        super().answer_callback(callback_id, text, show_alert)
 
     def channel_member(self, channel: str, user_id: int) -> ChatMember:
         self.channels.append(channel)

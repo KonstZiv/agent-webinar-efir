@@ -7,9 +7,11 @@ Without the bot settings nobody provides them, and the webhook answers 404.
 
 from app.adapters.bot.workers import BotWorkers
 from app.core.bot.dialog import BotDialog
-from app.core.bot.ports import Pause
+from app.core.bot.ports import ATTENDANCE_KEY, AttendanceViaTelegram, Pause
 from app.services import Key
 
 DIALOG = Key[BotDialog]("bot.dialog")
+# Provided by the slice «відмітка присутності»; the bot only finds it, without that slice's code.
+ATTENDANCE = Key[AttendanceViaTelegram](ATTENDANCE_KEY)
 WORKERS = Key[BotWorkers]("bot.workers")
 PAUSE = Key[Pause]("bot.pause")  # between the attempts to register the webhook

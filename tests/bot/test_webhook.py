@@ -292,7 +292,7 @@ def test_the_log_has_the_kind_of_update_and_its_result(
     bot_site.start(USER, created.link_tokens[0])
     bot_site.start(OTHER)
     bot_site.recheck(USER)
-    bot_site.post(message_update(USER, "hello"))
+    bot_site.post(message_update(USER, "/help"))
 
     logged = app_log(caplog)
     assert "Telegram update start_token: linked, not_subscribed" in logged

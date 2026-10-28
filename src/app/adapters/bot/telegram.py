@@ -126,7 +126,7 @@ class TelegramMessenger:
         return f"{type(self).__name__}()"
 
     def send_message(
-        self, chat_id: int, text: str, buttons: Sequence[Sequence[Button]] = ()
+        self, chat_id: int | str, text: str, buttons: Sequence[Sequence[Button]] = ()
     ) -> None:
         payload: Json = {"chat_id": chat_id, "text": text}
         rows = [[_button(button) for button in row] for row in buttons]
@@ -134,10 +134,14 @@ class TelegramMessenger:
             payload["reply_markup"] = {"inline_keyboard": rows}
         self._call("sendMessage", payload)
 
-    def answer_callback(self, callback_id: str, text: str | None = None) -> None:
+    def answer_callback(
+        self, callback_id: str, text: str | None = None, show_alert: bool = False
+    ) -> None:
         payload: Json = {"callback_query_id": callback_id}
         if text is not None:
             payload["text"] = text
+        if show_alert:
+            payload["show_alert"] = True
         self._call("answerCallbackQuery", payload)
 
     def channel_member(self, channel: str, user_id: int) -> ChatMember:

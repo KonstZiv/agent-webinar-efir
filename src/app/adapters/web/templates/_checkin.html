@@ -38,7 +38,8 @@
       <label class="checkin__label" for="checkin-email">{{ texts.email_label }}</label>
       <input class="checkin__input" id="checkin-email" name="email" type="email"
              value="{{ state.email if state else '' }}" placeholder="{{ texts.email_placeholder }}"
-             autocomplete="email" aria-describedby="checkin-email-hint">
+             autocomplete="email" aria-describedby="checkin-email-hint"
+             {%- if state and state.autofocus_email %} autofocus{% endif %}>
       <p class="checkin__hint" id="checkin-email-hint">{{ texts.email_hint }}</p>
     </div>
     <fieldset class="checkin__rating">

@@ -11,8 +11,10 @@ it again; so does a body that does not parse. A command runs on the bot's own th
 on ``sendMessage`` get 503: Telegram delivers the update again, and the rules give the same link
 the second time. A 429 on ``getChatMember`` is «the check failed» for the person and 200, one on
 ``answerCallbackQuery`` is only logged (``app.core.bot.dialog``). Any other storage failure is a
-bug a retry would repeat: 200 and an error in the log. The log names the kind of update and its
-result, never its body, ids or tokens.
+bug a retry would repeat: 200 and an error in the log. The attendance (``app.core.bot.attendance``)
+never fails an update: its answers and failures are statuses, and a message Telegram does not take
+is only logged, so that a retry cannot add a question twice. The log names the kind of update and
+its result, never its body, ids, tokens, codes or questions.
 """
 
 import hmac
@@ -23,7 +25,16 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from app.adapters.bot.keys import DIALOG, WORKERS
 from app.adapters.bot.updates import parse_update
 from app.adapters.web.dependencies import get_container
-from app.core.bot.commands import Command, Recheck
+from app.core.bot.commands import (
+    Command,
+    PickGroup,
+    Press,
+    Question,
+    Rate,
+    Recheck,
+    Start,
+    TeacherCommand,
+)
 from app.core.bot.ports import MessengerRateLimited
 from app.core.ports import StorageError, StorageUnavailable
 
@@ -36,9 +47,22 @@ SECRET_HEADER = "X-Telegram-Bot-Api-Secret-Token"
 
 
 def _kind(command: Command) -> str:
-    if isinstance(command, Recheck):
-        return "recheck"
-    return "start" if command.payload is None else "start_token"
+    """The kind of an update for the log: never its text, ids or tokens."""
+    match command:
+        case Start():
+            return "start" if command.payload is None else "start_token"
+        case Recheck():
+            return "recheck"
+        case TeacherCommand():
+            return command.name
+        case PickGroup():
+            return "pick_group"
+        case Press():
+            return "press"
+        case Rate():
+            return "rate"
+        case Question():
+            return "question"
 
 
 @router.post(PATH)

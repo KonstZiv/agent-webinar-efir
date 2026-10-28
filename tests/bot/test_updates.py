@@ -1,4 +1,5 @@
-"""Updates of Telegram as the bot reads them: ``/start`` and the button, in private chats only."""
+"""Updates of Telegram as the bot reads them: commands, buttons and texts, in private chats only
+(the button «Я на занятті» may also come from a post of the channel)."""
 
 import json
 from typing import Any
@@ -6,9 +7,16 @@ from typing import Any
 import pytest
 
 from app.adapters.bot.updates import parse_update
-from app.core.bot.commands import Recheck, Start
+from app.core.bot.commands import PickGroup, Press, Question, Rate, Recheck, Start, TeacherCommand
 from app.core.entities import TelegramAccount
-from tests.bot.helpers import TOO_DEEP, USER, message_update, recheck_update, start_update
+from tests.bot.helpers import (
+    TOO_DEEP,
+    USER,
+    callback_update,
+    message_update,
+    recheck_update,
+    start_update,
+)
 
 
 def parse(update: object) -> object:
@@ -82,9 +90,111 @@ def test_other_updates_are_ignored(update: dict[str, Any]) -> None:
     assert parse(update) is None
 
 
-@pytest.mark.parametrize("text", ["hello", "/help", "/started", "start", "/Start x"])
-def test_other_texts_and_commands_are_ignored(text: str) -> None:
+@pytest.mark.parametrize("text", ["/help", "/started", "/Start x", "/checkins", "/checkin_x"])
+def test_other_commands_are_ignored(text: str) -> None:
     assert parse(message_update(USER, text)) is None
+
+
+@pytest.mark.parametrize("text", ["hello", "start", " a question\nin two lines "])
+def test_a_text_that_is_not_a_command_is_a_possible_question(text: str) -> None:
+    assert parse(message_update(USER, text)) == Question(USER.user_id, USER.user_id, text.strip())
+
+
+def test_an_empty_text_is_ignored() -> None:
+    assert parse(message_update(USER, "   ")) is None
+
+
+@pytest.mark.parametrize(
+    ("text", "name", "arguments"),
+    [
+        ("/checkin", "checkin", ""),
+        ("/checkin cbs-2026-10", "checkin", "cbs-2026-10"),
+        ("/checkin   cbs-2026-10   15 ", "checkin", "cbs-2026-10   15"),
+        ("/checkin@sentinel_webinar_bot cbs-2026-10", "checkin", "cbs-2026-10"),
+        ("/checkin_close", "checkin_close", ""),
+        ("/checkin_close cbs-2026-10", "checkin_close", "cbs-2026-10"),
+        ("/checkin_report open-2026-10", "checkin_report", "open-2026-10"),
+    ],
+)
+def test_the_commands_of_the_teacher(text: str, name: str, arguments: str) -> None:
+    assert parse(message_update(USER, text)) == TeacherCommand(
+        USER.user_id, USER.user_id, name, arguments
+    )
+
+
+def test_the_commands_of_the_teacher_are_read_in_private_chats_only() -> None:
+    update = message_update(USER, "/checkin cbs-2026-10", chat_type="supergroup", chat_id=-100555)
+
+    assert parse(update) is None
+
+
+def test_the_button_of_a_check_in_in_the_channel() -> None:
+    update = callback_update(USER, "checkin:42", chat_type="channel", chat_id=-100555)
+    callback_id = update["callback_query"]["id"]
+
+    assert parse(update) == Press(USER.user_id, callback_id, 42)
+
+
+def test_the_button_of_a_check_in_in_a_private_chat() -> None:
+    update = callback_update(USER, "checkin:42")
+
+    assert parse(update) == Press(USER.user_id, update["callback_query"]["id"], 42)
+
+
+@pytest.mark.parametrize("chat_type", ["group", "supergroup"])
+def test_the_button_of_a_check_in_in_a_group_is_ignored(chat_type: str) -> None:
+    assert parse(callback_update(USER, "checkin:42", chat_type=chat_type)) is None
+
+
+def test_the_rating_button() -> None:
+    update = callback_update(USER, "rate:42:5")
+
+    assert parse(update) == Rate(USER.user_id, USER.user_id, update["callback_query"]["id"], 42, 5)
+
+
+def test_the_button_of_a_group() -> None:
+    update = callback_update(USER, "open:cbs-2026-10")
+
+    assert parse(update) == PickGroup(
+        USER.user_id, USER.user_id, update["callback_query"]["id"], "cbs-2026-10"
+    )
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        "checkin:",
+        "checkin:x",
+        "checkin:1234567890123456789",  # 19 digits: beyond a bigint
+        "checkin:-1",
+        "checkin:1 ",
+        "rate:42:0",
+        "rate:42:6",
+        "rate:42:55",
+        "rate:42",
+        "open:",
+        "open:X",
+        "open:a",
+        "open:cbs_2026",
+        f"open:{'a' * 33}",
+        "close:1",
+    ],
+)
+def test_malformed_data_of_a_button_is_ignored(data: str) -> None:
+    assert parse(callback_update(USER, data)) is None
+    assert parse(callback_update(USER, data, chat_type="channel")) is None
+
+
+def test_the_rating_and_group_buttons_are_for_private_chats_only() -> None:
+    assert parse(callback_update(USER, "rate:42:5", chat_type="channel")) is None
+    assert parse(callback_update(USER, "open:cbs-2026-10", chat_type="channel")) is None
+
+
+def test_a_button_without_data_is_ignored() -> None:
+    update = callback_update(USER, "checkin:42")
+    del update["callback_query"]["data"]
+
+    assert parse(update) is None
 
 
 def test_a_button_of_someone_else_is_ignored() -> None:

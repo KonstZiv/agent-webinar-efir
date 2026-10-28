@@ -8,7 +8,7 @@ unsubscribe removes the marks and the group membership with the participant.
 from collections.abc import Sequence
 from datetime import date, datetime, timedelta
 
-from sqlalchemy import Engine, case, func, select, update
+from sqlalchemy import Boolean, Engine, case, func, literal_column, select, union_all, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -16,7 +16,7 @@ from app.adapters.db.models import Attendance, Participant, ParticipantGroup
 from app.adapters.db.models import Checkin as CheckinRow
 from app.adapters.db.transaction import transaction
 from app.core.checkin.model import Checkin as CheckinEntity
-from app.core.checkin.model import Entry, Listed, Report
+from app.core.checkin.model import Entry, Listed, Mark, OpenInGroup, Report
 
 # Takes turns to pick a code, so two check-ins opened at once never share one.
 _CODE_LOCK = "checkin.code"
@@ -65,10 +65,82 @@ class SqlCheckinStore:
             session.flush()
             return _entity(row)
 
+    def add_in_group(
+        self,
+        code: str,
+        lesson_date: date,
+        group: str,
+        opened_at: datetime,
+        closes_at: datetime,
+    ) -> CheckinEntity | OpenInGroup | None:
+        taken = select(CheckinRow.id).where(
+            CheckinRow.code == code, CheckinRow.closes_at > opened_at
+        )
+        in_group = (
+            select(CheckinRow)
+            .where(CheckinRow.group_code == group, CheckinRow.closes_at > opened_at)
+            .order_by(CheckinRow.id.desc())
+            .limit(1)
+        )
+        with transaction(self._engine, "open check-in in group") as session:
+            session.execute(select(func.pg_advisory_xact_lock(func.hashtext(_CODE_LOCK))))
+            existing = session.scalars(in_group).first()
+            if existing is not None:
+                return OpenInGroup(_entity(existing))
+            if session.scalars(taken.limit(1)).first() is not None:
+                return None
+            row = CheckinRow(
+                code=code,
+                lesson_date=lesson_date,
+                group_code=group,
+                opened_at=opened_at,
+                closes_at=closes_at,
+            )
+            session.add(row)
+            session.flush()
+            return _entity(row)
+
     def get(self, checkin_id: int) -> CheckinEntity | None:
         with transaction(self._engine, "read check-in") as session:
             row = session.get(CheckinRow, checkin_id)
             return None if row is None else _entity(row)
+
+    def latest(self, group: str | None) -> CheckinEntity | None:
+        statement = select(CheckinRow).order_by(CheckinRow.id.desc()).limit(1)
+        if group is not None:
+            statement = statement.where(CheckinRow.group_code == group)
+        with transaction(self._engine, "read latest check-in") as session:
+            row = session.scalars(statement).first()
+            return None if row is None else _entity(row)
+
+    def latest_open(self, group: str | None, at: datetime) -> CheckinEntity | None:
+        statement = (
+            select(CheckinRow)
+            .where(CheckinRow.opened_at <= at, CheckinRow.closes_at > at)
+            .order_by(CheckinRow.id.desc())
+            .limit(1)
+        )
+        if group is not None:
+            statement = statement.where(CheckinRow.group_code == group)
+        with transaction(self._engine, "read latest open check-in") as session:
+            row = session.scalars(statement).first()
+            return None if row is None else _entity(row)
+
+    def known_groups(self, limit: int) -> list[str]:
+        seen = union_all(
+            select(CheckinRow.group_code.label("code"), CheckinRow.opened_at.label("at")).where(
+                CheckinRow.group_code.is_not(None)
+            ),
+            select(ParticipantGroup.group_code.label("code"), ParticipantGroup.assigned_at),
+        ).subquery()
+        statement = (
+            select(seen.c.code)
+            .group_by(seen.c.code)
+            .order_by(func.max(seen.c.at).desc(), seen.c.code)
+            .limit(limit)
+        )
+        with transaction(self._engine, "list known groups") as session:
+            return list(session.scalars(statement))
 
     def close(self, checkin_id: int, at: datetime) -> CheckinEntity | None:
         # ``closes_at`` stays after ``opened_at`` (the table checks it) even at the same moment.
@@ -136,7 +208,7 @@ class SqlCheckinStore:
         rating: int | None,
         question: str | None,
         at: datetime,
-    ) -> None:
+    ) -> bool:
         insertion = insert(Attendance).values(
             checkin_id=checkin_id,
             participant_id=participant_id,
@@ -147,7 +219,7 @@ class SqlCheckinStore:
             updated_at=at,
         )
         given = insertion.excluded
-        statement = insertion.on_conflict_do_update(
+        upsert = insertion.on_conflict_do_update(
             index_elements=[Attendance.checkin_id, Attendance.participant_id],
             set_={
                 "rating": func.coalesce(given.rating, Attendance.rating),
@@ -158,8 +230,48 @@ class SqlCheckinStore:
                 ),
             },
         )
+        # ``xmax`` is zero in a row inserted now, not in one that was updated.
         with transaction(self._engine, "mark attendance") as session:
-            session.execute(statement)
+            inserted = session.execute(upsert.returning(literal_column("(xmax = 0)", Boolean)))
+            return inserted.scalar_one()
+
+    def set_rating(self, checkin_id: int, participant_id: int, rating: int, at: datetime) -> bool:
+        statement = (
+            update(Attendance)
+            .where(Attendance.checkin_id == checkin_id, Attendance.participant_id == participant_id)
+            .values(rating=rating, updated_at=at)
+            .returning(Attendance.id)
+        )
+        with transaction(self._engine, "rate attendance") as session:
+            return session.scalars(statement).first() is not None
+
+    def latest_mark(self, participant_id: int, closes_after: datetime) -> Mark | None:
+        statement = (
+            select(CheckinRow, Attendance.question)
+            .join(Attendance, Attendance.checkin_id == CheckinRow.id)
+            .where(Attendance.participant_id == participant_id, CheckinRow.closes_at > closes_after)
+            .order_by(CheckinRow.opened_at.desc(), CheckinRow.id.desc())
+            .limit(1)
+        )
+        with transaction(self._engine, "read latest mark") as session:
+            found = session.execute(statement).first()
+            return None if found is None else Mark(_entity(found[0]), found[1])
+
+    def set_question(
+        self, checkin_id: int, participant_id: int, old: str | None, new: str, at: datetime
+    ) -> bool:
+        statement = (
+            update(Attendance)
+            .where(
+                Attendance.checkin_id == checkin_id,
+                Attendance.participant_id == participant_id,
+                Attendance.question.is_not_distinct_from(old),
+            )
+            .values(question=new, updated_at=at)
+            .returning(Attendance.id)
+        )
+        with transaction(self._engine, "write question") as session:
+            return session.scalars(statement).first() is not None
 
     def assign(self, group: str, emails: Sequence[str], at: datetime) -> tuple[int, list[str]]:
         if not emails:

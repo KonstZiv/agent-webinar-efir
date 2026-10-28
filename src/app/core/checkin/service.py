@@ -11,11 +11,15 @@ from enum import StrEnum
 
 from app.core.checkin.addresses import looks_like_email, normalize_email
 from app.core.checkin.model import (
+    FEEDBACK_PERIOD,
     MAX_QUESTION_LENGTH,
+    RATINGS,
     SOURCE_SITE,
+    SOURCE_TELEGRAM,
     Checkin,
     Listed,
     Members,
+    OpenInGroup,
     Report,
     new_code,
     normalize_code,
@@ -27,6 +31,7 @@ from app.core.ports import Clock, ParticipantStore, RateLimiter, StorageError
 logger = logging.getLogger(__name__)
 
 CODE_ATTEMPTS = 20
+QUESTION_ATTEMPTS = 3
 
 
 class Problem(StrEnum):
@@ -41,6 +46,28 @@ class Problem(StrEnum):
     TOO_MANY = "too_many"
     RATING_INVALID = "rating_invalid"  # not 1–5: the form offers no such choice
     FAILED = "failed"  # the storage failed
+
+
+class Verdict(StrEnum):
+    """What came of a mark, a rating or a question from Telegram; the value is the status."""
+
+    MARKED = "marked"
+    ALREADY = "already"  # marked before
+    NOT_LINKED = "not_linked"  # no registration has this Telegram
+    CLOSED = "closed"  # the window is shut, or there is no such check-in
+    RATED = "rated"
+    TOO_LATE = "too_late"  # the day for a rating is over
+    NOT_MARKED = "not_marked"  # no mark to rate or to ask under
+    SAVED = "saved"
+    TOO_LONG = "too_long"
+
+
+@dataclass(frozen=True, slots=True)
+class Telegram:
+    """The verdict and the check-in it concerns, when there is one."""
+
+    verdict: Verdict
+    checkin: Checkin | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,9 +111,94 @@ class Attendance:
                 return checkin
         raise StorageError("no free check-in code")
 
+    def open_in_group(
+        self, lesson_date: date, group: str, window_minutes: int
+    ) -> Checkin | OpenInGroup:
+        """Like ``open``, but a group with an open check-in gets no second one (it is returned)."""
+        now = self._clock.now()
+        for _ in range(CODE_ATTEMPTS):
+            found = self._store.add_in_group(
+                self._make_code(),
+                lesson_date,
+                group,
+                now,
+                now + timedelta(minutes=window_minutes),
+            )
+            if found is not None:
+                if isinstance(found, Checkin):
+                    logger.info("Check-in opened: window %d min", window_minutes)
+                return found
+        raise StorageError("no free check-in code")
+
     def close(self, checkin_id: int) -> Checkin | None:
         """Close now; an already closed check-in is returned as it is; ``None`` — unknown id."""
         return self._store.close(checkin_id, self._clock.now())
+
+    def close_latest_open(self, group: str | None) -> Checkin | None:
+        """Close the latest open check-in of ``group`` (of any group if ``None``)."""
+        found = self._store.latest_open(group, self._clock.now())
+        return None if found is None else self.close(found.id)
+
+    def latest_report(self, group: str | None) -> Report | None:
+        """The report of the latest check-in of ``group`` (of any group if ``None``)."""
+        found = self._store.latest(group)
+        return None if found is None else self._store.report(found.id)
+
+    def known_groups(self, limit: int) -> list[str]:
+        """Group codes the teacher can pick, the freshest first."""
+        return self._store.known_groups(limit)
+
+    def mark_telegram(self, checkin_id: int, tg_user_id: int) -> Telegram:
+        """Mark the participant with this Telegram on the check-in, if its window is open."""
+        now = self._clock.now()
+        checkin = self._store.get(checkin_id)
+        if checkin is None or not checkin.is_open(now):
+            return Telegram(Verdict.CLOSED)
+        participant = self._participants.by_telegram(tg_user_id)
+        if participant is None:
+            return Telegram(Verdict.NOT_LINKED, checkin)
+        added = self._store.mark(checkin.id, participant.id, SOURCE_TELEGRAM, None, None, now)
+        return Telegram(Verdict.MARKED if added else Verdict.ALREADY, checkin)
+
+    def rate_telegram(self, checkin_id: int, tg_user_id: int, rating: int) -> Telegram:
+        """Replace the rating of the participant's mark; taken until a day after closing."""
+        if rating not in RATINGS:
+            return Telegram(Verdict.NOT_MARKED)
+        now = self._clock.now()
+        checkin = self._store.get(checkin_id)
+        participant = self._participants.by_telegram(tg_user_id)
+        if checkin is None or participant is None:
+            return Telegram(Verdict.NOT_MARKED)
+        if not checkin.takes_feedback(now):
+            return Telegram(Verdict.TOO_LATE, checkin)
+        if not self._store.set_rating(checkin.id, participant.id, rating, now):
+            return Telegram(Verdict.NOT_MARKED, checkin)
+        return Telegram(Verdict.RATED, checkin)
+
+    def ask_telegram(self, tg_user_id: int, text: str) -> Telegram:
+        """Add the question to the latest mark that still takes feedback, on a new line.
+
+        Without such a mark (or a registration) nothing is stored. The question stays within
+        ``MAX_QUESTION_LENGTH`` together with what was written before, or nothing is added.
+        """
+        now = self._clock.now()
+        participant = self._participants.by_telegram(tg_user_id)
+        if participant is None:
+            return Telegram(Verdict.NOT_MARKED)
+        addition = text.strip()
+        for _ in range(QUESTION_ATTEMPTS):
+            mark = self._store.latest_mark(participant.id, now - FEEDBACK_PERIOD)
+            if mark is None or not addition:
+                return Telegram(Verdict.NOT_MARKED)
+            joined = f"{mark.question}\n{addition}" if mark.question else addition
+            if len(joined) > MAX_QUESTION_LENGTH:
+                return Telegram(Verdict.TOO_LONG, mark.checkin)
+            saved = self._store.set_question(
+                mark.checkin.id, participant.id, mark.question, joined, now
+            )
+            if saved:
+                return Telegram(Verdict.SAVED, mark.checkin)
+        raise StorageError("the question keeps changing")  # two people with one Telegram at once
 
     def listed(self) -> list[Listed]:
         return self._store.listed()

@@ -106,7 +106,7 @@ class FakeHumanCheck:
 
 @dataclass(frozen=True, slots=True)
 class SentMessage:
-    chat_id: int
+    chat_id: int | str
     text: str
     buttons: tuple[tuple[Button, ...], ...] = ()
 
@@ -119,17 +119,21 @@ class FakeMessenger:
     unavailable: bool = False
     sent: list[SentMessage] = field(default_factory=list)
     answered: list[tuple[str, str | None]] = field(default_factory=list)
+    alerts: list[bool] = field(default_factory=list)  # ``show_alert`` of each answer, in step
     webhooks: list[tuple[str, str, tuple[str, ...]]] = field(default_factory=list)
 
     def send_message(
-        self, chat_id: int, text: str, buttons: Sequence[Sequence[Button]] = ()
+        self, chat_id: int | str, text: str, buttons: Sequence[Sequence[Button]] = ()
     ) -> None:
         self._check()
         self.sent.append(SentMessage(chat_id, text, tuple(tuple(row) for row in buttons)))
 
-    def answer_callback(self, callback_id: str, text: str | None = None) -> None:
+    def answer_callback(
+        self, callback_id: str, text: str | None = None, show_alert: bool = False
+    ) -> None:
         self._check()
         self.answered.append((callback_id, text))
+        self.alerts.append(show_alert)
 
     def channel_member(self, channel: str, user_id: int) -> ChatMember:
         self._check()
