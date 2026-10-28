@@ -22,6 +22,11 @@
   --accent: var(--color-accent);
 }
 
+/* The background fills the whole window, down to the footer zone. */
+body:has(.checkin-admin) {
+  background: #f7f5ff;
+}
+
 .page:has(> .checkin-admin) {
   max-width: none;
   background: var(--color-bg);
