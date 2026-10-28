@@ -6,6 +6,7 @@ as that section describes: ``{closes_at}`` and ``{closed_at}`` as «HH:MM» in K
 as «DD.MM.YYYY», ``{lesson_day_month}`` as «28 жовтня».
 """
 
+import html
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime
 
@@ -69,16 +70,22 @@ ALREADY_OPEN = (
 )
 CLOSED = "Чек-ін #{id} групи {group} закрито о {closed_at} за Києвом. Відмітились: {attended}."
 NO_OPEN = "Відкритих чек-інів немає."
-REPORT = (
-    "Чек-ін #{id}, заняття {lesson_date}, група {group}: відмітились {attended} (сайт {site}, "
-    "Telegram {telegram}). Оцінки: 5 — {r5}, 4 — {r4}, 3 — {r3}, 2 — {r2}, 1 — {r1}; середня "
-    "{average}. Запитання ({questions_count}): {questions}"
-)
+# The report: a narrow table in ``<pre>`` (message 1), the questions as plain text (message 2).
+REPORT_TITLE = "Чек-ін #{id} · група {group}"
+REPORT_DAY = "Заняття {lesson_date}"
+REPORT_ATTENDED = "Відмітились"
+REPORT_SITE = "на сайті"
+REPORT_TELEGRAM = "у Telegram"
+REPORT_RATINGS = "Оцінки"
+REPORT_AVERAGE = "Середня"
+REPORT_QUESTIONS = "Запитання ({questions_count}):"
 NO_CHECKINS = "Чек-інів ще немає."
 
 NO_GROUP = "—"  # a check-in without a group (opened through the admin API)
 NO_AVERAGE = "—"
-NO_QUESTIONS = "немає"
+TABLE_WIDTH = 24  # characters of the rows with numbers and of the separator
+BAR_WIDTH = 10
+BAR = "█"
 MESSAGE_LIMIT = 4096  # the longest text Telegram takes in one message
 
 
@@ -136,28 +143,50 @@ def group_buttons(groups: Sequence[str]) -> tuple[tuple[Button, ...], ...]:
     return tuple(tuple(buttons[start : start + 2]) for start in range(0, len(buttons), 2))
 
 
-def report_text(report: ReportSummary) -> str:
-    """The teacher's report: counts, ratings and questions, no addresses."""
+def _aligned(label: str, value: object) -> str:
+    """``label`` at the left, ``value`` at the right edge of the table."""
+    return f"{label}{value!s:>{TABLE_WIDTH - len(label)}}"
+
+
+def _bar(count: int, biggest: int) -> str:
+    if count <= 0 or biggest <= 0:
+        return ""
+    return BAR * max(1, int(BAR_WIDTH * count / biggest + 0.5))
+
+
+def report_table(report: ReportSummary) -> str:
+    """The teacher's report, message 1: counts and ratings in ``<pre>`` (HTML), no addresses."""
     ratings: Mapping[int, int] = report.ratings
+    biggest = max((ratings.get(number, 0) for number in range(1, 6)), default=0)
     average = f"{report.average:.1f}" if report.average is not None else NO_AVERAGE
+    separator = "─" * TABLE_WIDTH
+    lines = [
+        REPORT_TITLE.format(id=report.id, group=report.group or NO_GROUP),
+        REPORT_DAY.format(lesson_date=full_date(report.lesson_date)),
+        separator,
+        _aligned(REPORT_ATTENDED, report.attended),
+        _aligned(f"  {REPORT_SITE}", report.site),
+        _aligned(f"  {REPORT_TELEGRAM}", report.telegram),
+        separator,
+        REPORT_RATINGS,
+    ]
+    for number in (5, 4, 3, 2, 1):
+        count = ratings.get(number, 0)
+        bar = _bar(count, biggest)
+        label = f"  {number} {bar}" if bar else f"  {number}"
+        lines.append(_aligned(label, count))
+    lines.append(_aligned(REPORT_AVERAGE, average))
+    return "<pre>" + "\n".join(html.escape(line) for line in lines) + "</pre>"
+
+
+def report_questions(report: ReportSummary) -> list[str]:
+    """The questions, message 2 (plain text, never HTML), in parts; empty if there are none."""
     questions = [" ".join(question.split()) for question in report.questions]
+    if not questions:
+        return []
+    head = REPORT_QUESTIONS.format(questions_count=len(questions))
     listed = "".join(f"\n{number}. {text}" for number, text in enumerate(questions, start=1))
-    return REPORT.format(
-        id=report.id,
-        lesson_date=full_date(report.lesson_date),
-        group=report.group or NO_GROUP,
-        attended=report.attended,
-        site=report.site,
-        telegram=report.telegram,
-        r5=ratings.get(5, 0),
-        r4=ratings.get(4, 0),
-        r3=ratings.get(3, 0),
-        r2=ratings.get(2, 0),
-        r1=ratings.get(1, 0),
-        average=average,
-        questions_count=len(questions),
-        questions=listed or NO_QUESTIONS,
-    )
+    return split_message(head + listed)
 
 
 def _units(text: str) -> int:

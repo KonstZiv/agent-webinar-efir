@@ -126,9 +126,19 @@ class TelegramMessenger:
         return f"{type(self).__name__}()"
 
     def send_message(
-        self, chat_id: int | str, text: str, buttons: Sequence[Sequence[Button]] = ()
+        self,
+        chat_id: int | str,
+        text: str,
+        buttons: Sequence[Sequence[Button]] = (),
+        *,
+        html: bool = False,
+        preview: bool = True,
     ) -> None:
         payload: Json = {"chat_id": chat_id, "text": text}
+        if html:
+            payload["parse_mode"] = "HTML"
+        if not preview:
+            payload["link_preview_options"] = {"is_disabled": True}
         rows = [[_button(button) for button in row] for row in buttons]
         if rows:
             payload["reply_markup"] = {"inline_keyboard": rows}

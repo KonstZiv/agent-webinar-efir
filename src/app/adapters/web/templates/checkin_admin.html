@@ -66,8 +66,36 @@
 
   <div class="checkin-admin__panel" id="admin-summary" hidden>
     <h1 class="checkin-admin__title">{{ admin.summary_title }}</h1>
-    <p id="admin-summary-count"></p>
-    <p id="admin-summary-ratings"></p>
+    <table class="checkin-admin__table" id="admin-summary-table">
+      <tbody>
+        <tr class="checkin-admin__total">
+          <th scope="row" colspan="2">{{ admin.report_labels.attended }}</th>
+          <td class="checkin-admin__number" id="admin-sum-attended"></td>
+        </tr>
+        <tr class="checkin-admin__sub">
+          <th scope="row" colspan="2">{{ admin.report_labels.site }}</th>
+          <td class="checkin-admin__number" id="admin-sum-site"></td>
+        </tr>
+        <tr class="checkin-admin__sub">
+          <th scope="row" colspan="2">{{ admin.report_labels.telegram }}</th>
+          <td class="checkin-admin__number" id="admin-sum-telegram"></td>
+        </tr>
+        <tr class="checkin-admin__heading">
+          <th scope="rowgroup" colspan="3">{{ admin.report_labels.ratings }}</th>
+        </tr>
+        {%- for number in (5, 4, 3, 2, 1) %}
+        <tr class="checkin-admin__rating" data-rating="{{ number }}">
+          <th scope="row">{{ number }}</th>
+          <td class="checkin-admin__track"><span class="checkin-admin__bar"></span></td>
+          <td class="checkin-admin__number"></td>
+        </tr>
+        {%- endfor %}
+        <tr class="checkin-admin__total">
+          <th scope="row" colspan="2">{{ admin.report_labels.average }}</th>
+          <td class="checkin-admin__number" id="admin-sum-average"></td>
+        </tr>
+      </tbody>
+    </table>
     <button class="checkin-admin__button checkin-admin__button--quiet" id="admin-questions-button" type="button"></button>
     <ol class="checkin-admin__questions" id="admin-questions" hidden></ol>
     <p id="admin-no-questions" hidden>{{ admin.no_questions }}</p>

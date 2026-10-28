@@ -202,7 +202,8 @@ class AttendanceDialog:
         if report.status == "none":
             self._say(chat_id, texts.NO_CHECKINS)
             return "none"
-        for part in texts.split_message(texts.report_text(report)):
+        self._say(chat_id, texts.report_table(report), html=True)
+        for part in texts.report_questions(report):
             self._say(chat_id, part)
         return "report"
 
@@ -284,10 +285,15 @@ class AttendanceDialog:
     # --- Telegram ---------------------------------------------------------------------------
 
     def _say(
-        self, chat_id: int, text: str, buttons: tuple[tuple[Button, ...], ...] = ()
+        self,
+        chat_id: int,
+        text: str,
+        buttons: tuple[tuple[Button, ...], ...] = (),
+        *,
+        html: bool = False,
     ) -> None:
         try:
-            self._messenger.send_message(chat_id, text, buttons)
+            self._messenger.send_message(chat_id, text, buttons, html=html, preview=False)
         except MessengerUnavailable as error:
             logger.warning("Telegram message not sent: %s", type(error).__name__)
 

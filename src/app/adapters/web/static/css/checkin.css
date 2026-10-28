@@ -1,11 +1,43 @@
 /* The slice «відмітка присутності»: the page /checkin and the block _checkin.html. Mobile first
-   at 375 px; the colours come from the tokens of site.css, the error colour is the slice's own. */
+   at 375 px. The colours are the palette «М'яке світло» of the site, copied here as the slice's
+   own tokens (no dependence on the files of another slice). */
+
+/* The tokens stand on the page column too, so the background reaches the edges of the window. */
+.checkin,
+.page:has(> .checkin-page) {
+  --color-bg: #f7f5ff;
+  --color-surface: #ffffff;
+  --color-text: #1c1733;
+  --color-text-muted: #5b5675; /* 6.9:1 on the surface, 6.4:1 on the background */
+  --color-accent: #6236ff; /* 6.0:1 on white; white on it: 6.0:1 */
+  --color-line: #e4dff5;
+  --color-on-accent: #ffffff;
+  --color-error: #b3261e; /* 6.5:1 on white, 6.1:1 on the background */
+  --ink: var(--color-text);
+  --ink-2: var(--color-text-muted);
+  --bg: var(--color-surface);
+  --bg-soft: var(--color-bg);
+  --line: var(--color-line);
+  --accent: var(--color-accent);
+}
+
+.page:has(> .checkin-page) {
+  max-width: none;
+  background: var(--color-bg);
+}
 
 .checkin-page {
   padding: 40px var(--side) 8px;
+  color: var(--color-text);
 }
 
 .checkin {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background: var(--color-surface);
   scroll-margin-top: 16px;
 }
 
@@ -39,9 +71,9 @@
   width: 100%;
   min-height: 48px;
   padding: 10px 12px;
-  border: 2px solid var(--line-2);
+  border: 2px solid var(--color-text-muted);
   border-radius: 12px;
-  background: var(--bg);
+  background: var(--color-surface);
   color: var(--ink);
   font: 400 16px/1.5 var(--font);
 }
@@ -84,7 +116,7 @@
   align-items: center;
   justify-content: center;
   min-height: 48px;
-  border: 2px solid var(--line-2);
+  border: 2px solid var(--color-text-muted);
   border-radius: 12px;
   cursor: pointer;
 }
@@ -112,15 +144,15 @@
 
 .checkin__error {
   margin: 0;
-  color: #b3261e; /* 6.5:1 on white */
+  color: var(--color-error);
   font-weight: 700;
 }
 
 .checkin__done {
   padding: 16px;
   border-radius: var(--radius);
-  background: var(--bg-soft);
-  color: var(--ink);
+  background: var(--color-bg);
+  color: var(--color-text);
   scroll-margin-top: 16px;
 }
 
@@ -133,8 +165,8 @@
   padding: 12px 22px;
   border: 0;
   border-radius: var(--radius-pill);
-  background: var(--accent);
-  color: var(--bg);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
   font: 700 16px/1.5 var(--font);
   cursor: pointer;
 }
