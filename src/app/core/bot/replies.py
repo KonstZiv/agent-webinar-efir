@@ -67,6 +67,7 @@ class Answer(StrEnum):
     TELEGRAM_TAKEN = "telegram_taken"
     TRANSFERRED = "transferred"
     WELCOME = "welcome"
+    FREE_TEXT = "free_text"  # the LLM draft answered a text (staging only)
 
 
 @dataclass(frozen=True, slots=True)

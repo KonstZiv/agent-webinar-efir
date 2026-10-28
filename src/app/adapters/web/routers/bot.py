@@ -20,10 +20,10 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request, Response
 
-from app.adapters.bot.keys import DIALOG, WORKERS
+from app.adapters.bot.keys import DIALOG, LLM_RESPONDER, WORKERS
 from app.adapters.bot.updates import parse_update
 from app.adapters.web.dependencies import get_container
-from app.core.bot.commands import Command, Recheck
+from app.core.bot.commands import Command, FreeText, Recheck
 from app.core.bot.ports import MessengerRateLimited
 from app.core.ports import StorageError, StorageUnavailable
 
@@ -38,6 +38,8 @@ SECRET_HEADER = "X-Telegram-Bot-Api-Secret-Token"
 def _kind(command: Command) -> str:
     if isinstance(command, Recheck):
         return "recheck"
+    if isinstance(command, FreeText):
+        return "free_text"
     return "start" if command.payload is None else "start_token"
 
 
@@ -58,7 +60,8 @@ async def telegram_webhook(request: Request) -> Response:
     workers = container.services.find(WORKERS)
     if dialog is None or workers is None:
         raise HTTPException(status_code=404)
-    command = parse_update(await request.body())
+    free_text = container.services.find(LLM_RESPONDER) is not None  # staging with LLM_ENABLED
+    command = parse_update(await request.body(), free_text=free_text)
     if command is None:
         logger.info("Telegram update ignored")
         return Response(status_code=200)

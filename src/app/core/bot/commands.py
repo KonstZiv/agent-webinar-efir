@@ -27,4 +27,13 @@ class Recheck:
     callback_id: str
 
 
-type Command = Start | Recheck
+@dataclass(frozen=True, slots=True)
+class FreeText:
+    """A text that is not a command; read only when the LLM draft is on (staging)."""
+
+    chat_id: int
+    account: TelegramAccount
+    text: str
+
+
+type Command = Start | Recheck | FreeText

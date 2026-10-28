@@ -24,8 +24,8 @@ import re
 from dataclasses import dataclass
 from enum import StrEnum
 
-from app.core.bot.commands import Command, Recheck
-from app.core.bot.ports import MessengerRateLimited
+from app.core.bot.commands import Command, FreeText, Recheck
+from app.core.bot.ports import FreeTextResponder, MessengerRateLimited
 from app.core.bot.replies import Answer, Replies
 from app.core.entities import ChatMember, LinkToken, Participant, TelegramAccount
 from app.core.ports import (
@@ -90,7 +90,9 @@ class BotDialog:
         clock: Clock,
         replies: Replies,
         channel: str,
+        free_text: FreeTextResponder | None = None,
     ) -> None:
+        self._free_text = free_text
         self._participants = participants
         self._tokens = tokens
         self._messenger = messenger
@@ -99,12 +101,30 @@ class BotDialog:
         self._channel = channel
 
     def handle(self, command: Command) -> Outcome:
+        if isinstance(command, FreeText):
+            return self._answer_text(command)
         if isinstance(command, Recheck):
             self._answer_button(command.callback_id)
             return Outcome(Linking.NONE, self._check(command.chat_id, command.account, True))
         if command.payload is None:
             return Outcome(Linking.NONE, self._check(command.chat_id, command.account))
         return self._start(command.chat_id, command.account, command.payload)
+
+    def _answer_text(self, command: FreeText) -> Outcome:
+        """The LLM draft answers a free text; without it the text is ignored.
+
+        The answer is paid for, so a Telegram failure to send it (a 429 too) is only logged:
+        a retry of the update would ask the model again.
+        """
+        outcome = Outcome(Linking.NONE, Answer.FREE_TEXT)
+        if self._free_text is None:
+            return outcome
+        text = self._free_text.respond(command.account.user_id, command.text)
+        try:
+            self._messenger.send_message(command.chat_id, text)
+        except MessengerUnavailable as error:
+            logger.warning("Telegram message not sent: %s", type(error).__name__)
+        return outcome
 
     def _start(self, chat_id: int, account: TelegramAccount, payload: str) -> Outcome:
         now = self._clock.now()
