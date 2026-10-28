@@ -35,6 +35,7 @@ from tests.bot.attendance import (
     opened,
     post,
     rated,
+    report_table,
 )
 from tests.bot.conftest import BotSiteFactory
 from tests.bot.helpers import (
@@ -103,6 +104,11 @@ def scene_not_written(site: BotSite, factory: ParticipantFactory) -> None:
     linked_and_open(site, factory)
     with broken_marks(site):
         press(site, "AB23")
+
+
+def scene_code_hint(site: BotSite, factory: ParticipantFactory) -> None:
+    factory("one@example.com", telegram=USER)
+    site.start(USER, "checkin")
 
 
 def scene_rated(site: BotSite, factory: ParticipantFactory) -> None:
@@ -178,6 +184,7 @@ SAID: dict[str, Scene] = {
     "Код не підходить": scene_code_invalid,
     "Telegram не прив'язано": scene_not_linked,
     "Не вдалося записати": scene_not_written,
+    "Підказка коду (після кнопки «Відмітитись» під постом)": scene_code_hint,
     "Оцінку прийнято": scene_rated,
     "Запитання прийнято": scene_question,
     "Запитання довше за 500 знаків": scene_question_too_long,
@@ -226,24 +233,7 @@ def with_values(situation: str, text: str, site: BotSite) -> str:
             return closed(row, "19:00", 0)
         case "/checkin_report":
             assert row is not None
-            values = {
-                "id": row.id,
-                "lesson_date": "21.10.2026",
-                "group": GROUP,
-                "attended": 0,
-                "site": 0,
-                "telegram": 0,
-                "average": "—",
-                "questions_count": 0,
-                "questions": "немає",
-                "r5": 0,
-                "r4": 0,
-                "r3": 0,
-                "r2": 0,
-                "r1": 0,
-            }
-            for name, value in values.items():
-                text = text.replace("{" + name + "}", str(value))
+            return report_table(row)  # the labels of the row; no marks, so no questions
     return text
 
 
@@ -271,6 +261,18 @@ def test_the_bot_says_the_text_of_the_situation(
     assert labels(message) == expected_labels(situation)
 
 
+@pytest.mark.parametrize("situation", sorted(SAID))
+def test_no_message_about_the_attendance_has_a_link_preview(
+    bot_site_factory: BotSiteFactory, participant_factory: ParticipantFactory, situation: str
+) -> None:
+    site = bot_site_factory(messenger=Telegram(), **TEACHER_ENV)
+
+    SAID[situation](site, participant_factory)
+
+    assert site.sent
+    assert all(not message.preview for message in site.sent)
+
+
 def test_the_post_of_the_channel_is_the_text_of_the_section(
     bot_site_factory: BotSiteFactory,
 ) -> None:
@@ -283,7 +285,7 @@ def test_the_post_of_the_channel_is_the_text_of_the_section(
     assert channel_post.text == post(OTHER_GROUP, 45)
     assert labels(channel_post) == POST_BUTTONS == ("Відмітитись",)
     [[button]] = channel_post.buttons
-    assert button.url == f"https://t.me/{BOT_USERNAME}"
+    assert button.url == f"https://t.me/{BOT_USERNAME}?start=checkin"
     assert button.callback_data is None
 
 
@@ -304,6 +306,15 @@ def test_without_the_slice_of_the_attendance_a_code_says_so() -> None:
     dialog_without_the_slice(messenger).handle(Code(USER.user_id, USER.user_id, "AB23"))
 
     assert [message.text for message in messenger.sent] == [ROWS[NO_SLICE][0]] == [NOT_INSTALLED]
+
+
+@pytest.mark.parametrize("linked", [True, False])
+def test_without_the_slice_of_the_attendance_the_hint_says_so(linked: bool) -> None:
+    messenger = FakeMessenger()
+
+    dialog_without_the_slice(messenger).code_hint(USER.user_id, linked)
+
+    assert [message.text for message in messenger.sent] == [NOT_INSTALLED]
 
 
 def test_without_the_slice_of_the_attendance_the_commands_are_unavailable() -> None:

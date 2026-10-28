@@ -184,9 +184,19 @@ class Messenger(Protocol):
     """The Telegram Bot API calls the bot needs; failures raise ``MessengerUnavailable``."""
 
     def send_message(
-        self, chat_id: int | str, text: str, buttons: Sequence[Sequence[Button]] = ()
+        self,
+        chat_id: int | str,
+        text: str,
+        buttons: Sequence[Sequence[Button]] = (),
+        *,
+        html: bool = False,
+        preview: bool = True,
     ) -> None:
-        """Send ``text`` to a chat id, or to a channel given as ``@name``; ``buttons`` are rows."""
+        """Send ``text`` to a chat id, or to a channel given as ``@name``; ``buttons`` are rows.
+
+        ``html`` sends ``text`` with ``parse_mode`` HTML (the caller escapes it);
+        ``preview=False`` turns the link preview off.
+        """
         ...
 
     def answer_callback(

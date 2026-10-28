@@ -110,6 +110,45 @@ def test_the_screen_and_the_summary_have_the_texts_of_14_4(bot_site: Site) -> No
     assert node.find("p", id="admin-error").text() == copy_network_error()
 
 
+def test_the_code_is_an_element_of_its_own_next_to_the_label(bot_site: Site) -> None:
+    board = parse(page(bot_site)).find("div", id="admin-board")
+
+    line = board.find("p", class_="checkin-admin__codeline")
+    assert line.find("span", id="admin-board-code-label") is not None
+    assert line.find("span", id="admin-board-code", class_="checkin-admin__code") is not None
+
+
+def report_labels() -> list[str]:
+    """The labels in backticks in the row `/checkin_report` of 14.3, read by the test itself."""
+    section = copy.section("14.3", copy.raw_copy_text())
+    [row] = [line for line in section.splitlines() if line.startswith("| `/checkin_report` |")]
+    return re.findall(r"`([^`]+)`", row.partition("|")[2].partition("|")[2])
+
+
+def test_the_summary_is_a_table_with_the_labels_of_the_report_14_3(bot_site: Site) -> None:
+    _, _, attended, on_site, telegram, ratings, average, _ = report_labels()
+
+    table = parse(page(bot_site)).find("div", id="admin-summary").find("table")
+
+    rows = table.find_all("tr")
+    assert [row.find("th").text() for row in rows] == [
+        attended,
+        on_site,
+        telegram,
+        ratings,
+        "5",
+        "4",
+        "3",
+        "2",
+        "1",
+        average,
+    ]
+    rated = [row for row in rows if row.attrs.get("data-rating")]
+    assert [row.attrs["data-rating"] for row in rated] == ["5", "4", "3", "2", "1"]
+    assert all(row.find("span", class_="checkin-admin__bar") is not None for row in rated)
+    assert "@" not in table.text()
+
+
 def copy_network_error() -> str:
     lines = [line for line in SECTION.splitlines() if line.startswith("**Збій мережі")]
     [line] = lines
@@ -134,8 +173,7 @@ def test_the_script_gets_the_texts_with_values_from_the_page(site: Site) -> None
     assert texts["code"] == SCREEN["Код"]
     assert texts["countdown"] == SCREEN["Відлік"]
     assert texts["counter"] == SCREEN["Лічильник"]
-    assert texts["summary_count"] == SUMMARY["Кількість"]
-    assert texts["summary_ratings"] == SUMMARY["Оцінки"]
+    assert "summary_count" not in texts and "summary_ratings" not in texts
     assert texts["questions_button"] == SUMMARY["Кнопка запитань"]
     assert texts["group_invalid"] == START["Група неправильна або порожня"]
     assert texts["minutes_invalid"] == START["Тривалість поза межами"]

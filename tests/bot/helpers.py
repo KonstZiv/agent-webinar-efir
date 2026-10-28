@@ -185,9 +185,17 @@ class Telegram(FakeMessenger):
     channels: list[str] = field(default_factory=list)
     calls: list[str] = field(default_factory=list)
 
-    def send_message(self, chat_id: int | str, text: str, buttons: Any = ()) -> None:
+    def send_message(
+        self,
+        chat_id: int | str,
+        text: str,
+        buttons: Any = (),
+        *,
+        html: bool = False,
+        preview: bool = True,
+    ) -> None:
         self._script("send_message")
-        super().send_message(chat_id, text, buttons)
+        super().send_message(chat_id, text, buttons, html=html, preview=preview)
 
     def answer_callback(
         self, callback_id: str, text: str | None = None, show_alert: bool = False

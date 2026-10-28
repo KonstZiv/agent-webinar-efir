@@ -256,7 +256,9 @@
     finishing = false;
     current = { id: checkin.id, closesAt: Date.parse(checkin.closes_at) };
     $("admin-board-group").textContent = fill(texts.group, { group: checkin.group || NO_VALUE });
-    $("admin-board-code").textContent = fill(texts.code, { code: checkin.code });
+    // The text "... {code}" is split at the placeholder: the words are small, the code is large.
+    $("admin-board-code-label").textContent = texts.code.split("{code}")[0].trim();
+    $("admin-board-code").textContent = checkin.code;
     $("admin-not-posted").hidden = posted !== false;
     renderCounter(checkin.attended || 0);
     show("board");
@@ -346,18 +348,19 @@
     const telegram = entries.filter((entry) => entry.source === "telegram").length;
     const questions = entries.map((entry) => entry.question).filter((text) => Boolean(text));
     const ratings = report.ratings || {};
-    $("admin-summary-count").textContent = fill(texts.summary_count, {
-      attended: report.attended,
-      site: site,
-      telegram: telegram,
-    });
-    $("admin-summary-ratings").textContent = fill(texts.summary_ratings, {
-      r5: ratings["5"] || 0,
-      r4: ratings["4"] || 0,
-      r3: ratings["3"] || 0,
-      r2: ratings["2"] || 0,
-      r1: ratings["1"] || 0,
-      average: typeof report.average === "number" ? report.average.toFixed(1) : NO_VALUE,
+    $("admin-sum-attended").textContent = report.attended;
+    $("admin-sum-site").textContent = site;
+    $("admin-sum-telegram").textContent = telegram;
+    $("admin-sum-average").textContent =
+      typeof report.average === "number" ? report.average.toFixed(1) : NO_VALUE;
+    // The bars are as wide as the count is to the biggest count (the labels are in the HTML).
+    const rows = Array.from(document.querySelectorAll("#admin-summary-table [data-rating]"));
+    const biggest = Math.max(0, ...rows.map((row) => ratings[row.dataset.rating] || 0));
+    rows.forEach((row) => {
+      const count = ratings[row.dataset.rating] || 0;
+      row.lastElementChild.textContent = count;
+      row.querySelector(".checkin-admin__bar").style.width =
+        biggest > 0 ? (100 * count) / biggest + "%" : "0";
     });
     const button = $("admin-questions-button");
     button.textContent = fill(texts.questions_button, { questions_count: questions.length });

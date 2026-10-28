@@ -10,6 +10,7 @@ from app.adapters.db.models import Checkin
 from app.core.entities import TelegramAccount
 from tests.bot.attendance import (
     ALREADY_MARKED,
+    CODE_HINT,
     CODE_INVALID,
     GROUP,
     NOT_INSTALLED,
@@ -501,3 +502,29 @@ def test_without_the_attendance_slice_a_code_says_unavailable() -> None:
     dialog.handle(Code(USER.user_id, USER.user_id, "AB23"))
 
     assert [message.text for message in messenger.sent] == [NOT_INSTALLED]
+
+
+# --- /start checkin: the hint after the button under the post ---------------------------------
+
+
+def test_start_checkin_asks_a_linked_person_for_the_code(
+    site: BotSite, participant_factory: ParticipantFactory
+) -> None:
+    participant_factory("one@example.com", telegram=USER)
+
+    site.start(USER, "checkin")
+
+    assert site.said() == [CODE_HINT]
+    assert marks(site) == []
+
+
+def test_start_checkin_tells_an_unlinked_person_to_link_and_links_nothing(
+    site: BotSite, participant_factory: ParticipantFactory
+) -> None:
+    person = participant_factory("one@example.com")
+
+    site.start(USER, "checkin")
+
+    assert site.said() == [NOT_LINKED]
+    assert marks(site) == []
+    assert site.participant(person.id).tg_user_id is None

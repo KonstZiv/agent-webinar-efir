@@ -202,7 +202,8 @@ class AttendanceDialog:
         if report.status == "none":
             self._say(chat_id, texts.NO_CHECKINS)
             return "none"
-        for part in texts.split_message(texts.report_text(report)):
+        self._say(chat_id, texts.report_table(report), html=True)
+        for part in texts.report_questions(report):
             self._say(chat_id, part)
         return "report"
 
@@ -234,6 +235,17 @@ class AttendanceDialog:
             case _:
                 self._say(command.chat_id, texts.NOT_WRITTEN)
         return marked.status
+
+    def code_hint(self, chat_id: int, linked: bool) -> str:
+        """The answer to ``/start checkin``: ask a linked person for the code, others to link."""
+        if self._attendance() is None:
+            self._say(chat_id, texts.NOT_INSTALLED)
+            return "unavailable"
+        if linked:
+            self._say(chat_id, texts.CODE_HINT)
+            return "code_hint"
+        self._say(chat_id, texts.NOT_LINKED.format(site_host=self._site_host))
+        return "not_linked"
 
     def _rate(self, command: Rate) -> str:
         service = self._attendance()
@@ -273,10 +285,15 @@ class AttendanceDialog:
     # --- Telegram ---------------------------------------------------------------------------
 
     def _say(
-        self, chat_id: int, text: str, buttons: tuple[tuple[Button, ...], ...] = ()
+        self,
+        chat_id: int,
+        text: str,
+        buttons: tuple[tuple[Button, ...], ...] = (),
+        *,
+        html: bool = False,
     ) -> None:
         try:
-            self._messenger.send_message(chat_id, text, buttons)
+            self._messenger.send_message(chat_id, text, buttons, html=html, preview=False)
         except MessengerUnavailable as error:
             logger.warning("Telegram message not sent: %s", type(error).__name__)
 

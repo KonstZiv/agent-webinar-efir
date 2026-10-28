@@ -5,6 +5,7 @@ The expected texts are read from docs/copy.md, section 14.3, by this module on i
 the foundation's models; the bot's tests do not use the other slice's code.
 """
 
+import re
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta
@@ -63,6 +64,7 @@ ALREADY_MARKED = say("Уже відмічені")
 CODE_INVALID = say("Код не підходить")
 NOT_LINKED = say("Telegram не прив'язано").replace("{site_host}", SITE_HOST)
 NOT_WRITTEN = say("Не вдалося записати")
+CODE_HINT = say("Підказка коду (після кнопки «Відмітитись» під постом)")
 NOT_INSTALLED = say("Зріз відмітки не підключено")
 QUESTION_ACCEPTED = say("Запитання прийнято")
 QUESTION_TOO_LONG = say("Запитання довше за 500 знаків")
@@ -221,4 +223,57 @@ def marks(site: BotSite) -> list[Attendance]:
 def checkins(site: BotSite) -> list[Checkin]:
     with Session(site.engine) as session:
         return list(session.scalars(select(Checkin).order_by(Checkin.id)))
+
+
+# --- the report table (14.3, `/checkin_report`) ------------------------------------------------
+
+_REPORT_ROW = next(
+    line for line in POST_SECTION.splitlines() if line.startswith("| `/checkin_report` |")
+)
+# title, day, attended, site, telegram, ratings, average, questions: the labels in backticks.
+REPORT_LABELS = re.findall(r"`([^`]+)`", _REPORT_ROW.partition("|")[2].partition("|")[2])
+assert len(REPORT_LABELS) == 8, REPORT_LABELS
+TABLE_WIDTH = 24
+
+
+def report_table(
+    checkin: Checkin,
+    *,
+    attended: int = 0,
+    site: int = 0,
+    telegram: int = 0,
+    ratings: dict[int, int] | None = None,
+    average: str = "—",
+    lesson_date: str = "21.10.2026",
+) -> str:
+    """The expected message 1 of the report, built from the labels of 14.3 on its own."""
+    title, day, l_attended, l_site, l_telegram, l_ratings, l_average, _ = REPORT_LABELS
+    counts = ratings or {}
+    biggest = max(counts.values(), default=0)
+
+    def line(label: str, value: object) -> str:
+        return label + str(value).rjust(TABLE_WIDTH - len(label))
+
+    def bar(count: int) -> str:
+        return "" if count == 0 else "█" * max(1, int(10 * count / biggest + 0.5))
+
+    lines = [
+        title.replace("{id}", str(checkin.id)).replace("{group}", str(checkin.group_code)),
+        day.replace("{lesson_date}", lesson_date),
+        "─" * TABLE_WIDTH,
+        line(l_attended, attended),
+        line("  " + l_site, site),
+        line("  " + l_telegram, telegram),
+        "─" * TABLE_WIDTH,
+        l_ratings,
+    ]
+    for number in (5, 4, 3, 2, 1):
+        count = counts.get(number, 0)
+        lines.append(line(f"  {number} {bar(count)}".rstrip(), count))
+    lines.append(line(l_average, average))
+    return "<pre>" + "\n".join(lines) + "</pre>"
+
+
+def report_questions_head(count: int) -> str:
+    return REPORT_LABELS[7].replace("{questions_count}", str(count))
 

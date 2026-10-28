@@ -1,8 +1,40 @@
 /* The slice «відмітка присутності»: the teacher's page /admin/checkin. The screen of the mark is
-   shown in Teams, so the code is large; the colours come from the tokens of site.css. */
+   shown in Teams, so the code is large. The colours are the palette «М'яке світло» of the site,
+   copied here as the slice's own tokens (no dependence on the files of another slice). */
+
+/* The tokens stand on the page column too, so the background reaches the edges of the window. */
+.checkin-admin,
+.page:has(> .checkin-admin) {
+  --color-bg: #f7f5ff;
+  --color-surface: #ffffff;
+  --color-text: #1c1733;
+  --color-text-muted: #5b5675; /* 6.9:1 on the surface, 6.4:1 on the background */
+  --color-accent: #6236ff; /* 6.0:1 on white; white on it: 6.0:1 */
+  --color-accent-2: #d7f96b; /* under the text #1c1733: 13:1 */
+  --color-line: #e4dff5;
+  --color-on-accent: #ffffff;
+  --color-error: #b3261e; /* 6.5:1 on white, 6.1:1 on the background */
+  --ink: var(--color-text);
+  --ink-2: var(--color-text-muted);
+  --bg: var(--color-surface);
+  --bg-soft: var(--color-bg);
+  --line: var(--color-line);
+  --accent: var(--color-accent);
+}
+
+/* The background fills the whole window, down to the footer zone. */
+body:has(.checkin-admin) {
+  background: #f7f5ff;
+}
+
+.page:has(> .checkin-admin) {
+  max-width: none;
+  background: var(--color-bg);
+}
 
 .checkin-admin {
   padding: 32px var(--side) 8px;
+  color: var(--color-text);
 }
 
 .checkin-admin [hidden] {
@@ -14,6 +46,10 @@
   gap: 16px;
   max-width: 640px;
   margin: 0 auto 24px;
+  padding: 24px;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background: var(--color-surface);
 }
 
 .checkin-admin__title {
@@ -35,50 +71,54 @@
   width: 100%;
   min-height: 48px;
   padding: 10px 12px;
-  border: 2px solid var(--line-2);
+  border: 2px solid var(--color-text-muted);
   border-radius: 12px;
-  background: var(--bg);
-  color: var(--ink);
+  background: var(--color-surface);
+  color: var(--color-text);
   font: 400 16px/1.5 var(--font);
 }
 
 .checkin-admin__input:focus-visible {
-  border-color: var(--accent);
-  outline: 3px solid var(--ink);
+  border-color: var(--color-accent);
+  outline: 3px solid var(--color-text);
   outline-offset: 2px;
 }
 
 .checkin-admin__hint {
   margin: 0;
-  color: var(--ink-2);
+  color: var(--color-text-muted);
   font-size: 14px;
 }
 
 .checkin-admin__error {
   margin: 0 auto 16px;
   max-width: 640px;
-  color: #b3261e; /* 6.5:1 on white */
+  color: var(--color-error);
   font-weight: 700;
+}
+
+.checkin-admin__panel .checkin-admin__error {
+  margin: 0;
 }
 
 .checkin-admin__button {
   min-height: 48px;
   padding: 10px 20px;
-  border: 2px solid var(--ink);
+  border: 2px solid var(--color-accent);
   border-radius: 12px;
-  background: var(--ink);
-  color: var(--bg);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
   font: 700 16px/1.4 var(--font);
   cursor: pointer;
 }
 
 .checkin-admin__button--quiet {
-  background: var(--bg);
-  color: var(--ink);
+  background: var(--color-surface);
+  color: var(--color-accent);
 }
 
 .checkin-admin__button:focus-visible {
-  outline: 3px solid var(--accent);
+  outline: 3px solid var(--color-text);
   outline-offset: 2px;
 }
 
@@ -94,8 +134,21 @@
   font: 700 28px/1.3 var(--font);
 }
 
+.checkin-admin__codeline {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.4em;
+  white-space: nowrap; /* the label and the code stay in one line */
+}
+
+.checkin-admin__code-label {
+  font: 700 24px/1.3 var(--font); /* not larger than the countdown */
+}
+
 .checkin-admin__code {
-  font: 800 clamp(72px, 22vw, 168px) / 1.1 var(--mono);
+  color: var(--color-accent);
+  font: 800 clamp(56px, 16vw, 144px) / 1.1 var(--mono);
   letter-spacing: 0.12em;
 }
 
@@ -103,7 +156,12 @@
   font-size: 20px;
 }
 
-.checkin-admin__countdown {
+.checkin-admin__screen .checkin-admin__countdown {
+  justify-self: center;
+  padding: 2px 16px;
+  border-radius: 999px;
+  background: var(--color-accent-2);
+  color: var(--color-text);
   font: 700 32px/1.3 var(--font);
   font-variant-numeric: tabular-nums;
 }
@@ -115,4 +173,59 @@
 .checkin-admin__questions {
   margin: 0;
   padding-left: 24px;
+}
+
+/* The summary table: the structure of the report in Telegram (docs/copy.md, 14.3). */
+
+.checkin-admin__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 18px;
+}
+
+.checkin-admin__table th,
+.checkin-admin__table td {
+  padding: 6px 0;
+  text-align: left;
+  font-weight: 400;
+}
+
+.checkin-admin__table .checkin-admin__total th,
+.checkin-admin__table .checkin-admin__total td,
+.checkin-admin__table .checkin-admin__heading th {
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line);
+  font-weight: 700;
+}
+
+.checkin-admin__table .checkin-admin__sub th {
+  padding-left: 16px;
+  color: var(--color-text-muted);
+}
+
+.checkin-admin__table .checkin-admin__rating th {
+  width: 2em;
+  padding-left: 16px;
+}
+
+.checkin-admin__table .checkin-admin__number {
+  width: 3em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.checkin-admin__table .checkin-admin__total .checkin-admin__number {
+  font-weight: 700;
+}
+
+.checkin-admin__track {
+  padding: 6px 12px;
+}
+
+.checkin-admin__bar {
+  display: block;
+  width: 0;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--color-accent);
 }

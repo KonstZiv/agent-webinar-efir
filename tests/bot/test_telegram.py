@@ -62,6 +62,23 @@ def messenger(handler: Handler, *, max_connections: int = 8) -> TelegramMessenge
 # --- requests ------------------------------------------------------------------------------
 
 
+def test_html_and_no_preview_are_sent_only_when_asked() -> None:
+    recorder = Recorder()
+
+    messenger(recorder).send_message(1, "<pre>a</pre>", html=True, preview=False)
+    messenger(recorder).send_message(1, "plain")
+
+    assert recorder.bodies == [
+        {
+            "chat_id": 1,
+            "text": "<pre>a</pre>",
+            "parse_mode": "HTML",
+            "link_preview_options": {"is_disabled": True},
+        },
+        {"chat_id": 1, "text": "plain"},
+    ]
+
+
 def test_a_message_with_buttons() -> None:
     recorder = Recorder()
     buttons = [

@@ -172,7 +172,38 @@ def load_texts(docs_dir: Path) -> CheckinTexts:
 
 
 ADMIN_SECTION = "14.4"
+REPORT_SECTION = "14.3"
 _BOLD = re.compile(r"^\*\*(.+?):\*\*\s*(.*)$")
+_CODE = re.compile(r"`([^`]+)`")
+
+
+@dataclass(frozen=True, slots=True)
+class ReportLabels:
+    """The labels of the report table: those of ``/checkin_report`` in docs/copy.md, 14.3."""
+
+    attended: str
+    site: str
+    telegram: str
+    ratings: str
+    average: str
+
+
+def _report_labels(lines: list[str]) -> ReportLabels:
+    """The labels in backticks in the row ``/checkin_report`` of 14.3, in the order they stand."""
+    for line in _section(lines, REPORT_SECTION):
+        if line.startswith("| `/checkin_report` |"):
+            spans = _CODE.findall(line.partition("|")[2].partition("|")[2])
+            # title, day, attended, site, telegram, ratings, average, questions
+            if len(spans) != 8:
+                raise ContentError(f"{COPY_FILE} {REPORT_SECTION}: «/checkin_report» labels")
+            return ReportLabels(
+                attended=spans[2],
+                site=spans[3],
+                telegram=spans[4],
+                ratings=spans[5],
+                average=spans[6],
+            )
+    raise ContentError(f"{COPY_FILE} {REPORT_SECTION}: no «/checkin_report»")
 
 
 @dataclass(frozen=True, slots=True)
@@ -205,8 +236,7 @@ class AdminTexts:
     close_button: str
     not_posted: str
     summary_title: str
-    summary_count: str
-    summary_ratings: str
+    report_labels: ReportLabels
     questions_button: str
     no_questions: str
     new_button: str
@@ -230,8 +260,6 @@ class AdminTexts:
             "code": self.screen_code,
             "countdown": self.screen_countdown,
             "counter": self.screen_counter,
-            "summary_count": self.summary_count,
-            "summary_ratings": self.summary_ratings,
             "questions_button": self.questions_button,
             "no_questions": self.no_questions,
             "network_error": self.network_error,
@@ -283,8 +311,7 @@ def load_admin_texts(docs_dir: Path) -> AdminTexts:
         close_button=need("Екран відмітки", "Кнопка"),
         not_posted=need("Екран відмітки", "Пост не опубліковано"),
         summary_title=need("Підсумок", "Заголовок"),
-        summary_count=need("Підсумок", "Кількість"),
-        summary_ratings=need("Підсумок", "Оцінки"),
+        report_labels=_report_labels(lines),
         questions_button=need("Підсумок", "Кнопка запитань"),
         no_questions=need("Підсумок", "Запитань немає"),
         new_button=need("Підсумок", "Кнопка"),

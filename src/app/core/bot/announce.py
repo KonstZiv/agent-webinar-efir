@@ -33,7 +33,10 @@ class CheckinPost:
         text = texts.POST.format(group=group or texts.NO_GROUP, window=minutes)
         try:
             self._messenger.send_message(
-                self._channel, text, texts.post_buttons(self._bot_username)
+                self._channel,
+                text,
+                texts.post_buttons(self._bot_username),
+                preview=False,
             )
         except MessengerUnavailable as error:
             logger.warning("Check-in post not published: %s", type(error).__name__)

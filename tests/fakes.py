@@ -109,6 +109,8 @@ class SentMessage:
     chat_id: int | str
     text: str
     buttons: tuple[tuple[Button, ...], ...] = ()
+    html: bool = False
+    preview: bool = True
 
 
 @dataclass
@@ -123,10 +125,18 @@ class FakeMessenger:
     webhooks: list[tuple[str, str, tuple[str, ...]]] = field(default_factory=list)
 
     def send_message(
-        self, chat_id: int | str, text: str, buttons: Sequence[Sequence[Button]] = ()
+        self,
+        chat_id: int | str,
+        text: str,
+        buttons: Sequence[Sequence[Button]] = (),
+        *,
+        html: bool = False,
+        preview: bool = True,
     ) -> None:
         self._check()
-        self.sent.append(SentMessage(chat_id, text, tuple(tuple(row) for row in buttons)))
+        self.sent.append(
+            SentMessage(chat_id, text, tuple(tuple(row) for row in buttons), html, preview)
+        )
 
     def answer_callback(
         self, callback_id: str, text: str | None = None, show_alert: bool = False
