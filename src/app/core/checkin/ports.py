@@ -6,6 +6,20 @@ from typing import Protocol
 
 from app.core.checkin.model import Checkin, Listed, Mark, OpenInGroup, Report
 
+# Key of the post of a check-in in the channel: the slice «бот» provides it, this slice finds it
+# by the name and never imports that slice.
+ANNOUNCER_KEY = "bot.checkin_post"
+
+
+class CheckinAnnouncer(Protocol):
+    """Publishes the post of an open check-in; the bot implements it."""
+
+    def announce(
+        self, checkin_id: int, code: str, group: str | None, lesson_date: date, minutes: int
+    ) -> bool:
+        """Publish the post; ``False`` when Telegram refuses it. Never raises for Telegram."""
+        ...
+
 
 class CheckinStore(Protocol):
     """Check-ins, marks and groups in the database; data operations only."""
@@ -28,11 +42,13 @@ class CheckinStore(Protocol):
         self,
         code: str,
         lesson_date: date,
-        group: str,
+        group: str | None,
         opened_at: datetime,
         closes_at: datetime,
     ) -> Checkin | OpenInGroup | None:
         """Like ``add``, but a group with an open check-in (``closes_at > opened_at``) gets none.
+
+        ``None`` as the group means the check-ins without a group.
 
         Return that open check-in as ``OpenInGroup``, ``None`` for a taken code. The checks and
         the write are one transaction, under the same lock as ``add``.

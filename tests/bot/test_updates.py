@@ -1,5 +1,4 @@
-"""Updates of Telegram as the bot reads them: commands, buttons and texts, in private chats only
-(the button «Я на занятті» may also come from a post of the channel)."""
+"""Updates of Telegram as the bot reads them: commands, buttons and texts, in private chats only."""
 
 import json
 from typing import Any
@@ -7,7 +6,7 @@ from typing import Any
 import pytest
 
 from app.adapters.bot.updates import parse_update
-from app.core.bot.commands import PickGroup, Press, Question, Rate, Recheck, Start, TeacherCommand
+from app.core.bot.commands import Code, PickGroup, Question, Rate, Recheck, Start, TeacherCommand
 from app.core.entities import TelegramAccount
 from tests.bot.helpers import (
     TOO_DEEP,
@@ -128,21 +127,26 @@ def test_the_commands_of_the_teacher_are_read_in_private_chats_only() -> None:
     assert parse(update) is None
 
 
-def test_the_button_of_a_check_in_in_the_channel() -> None:
-    update = callback_update(USER, "checkin:42", chat_type="channel", chat_id=-100555)
-    callback_id = update["callback_query"]["id"]
-
-    assert parse(update) == Press(USER.user_id, callback_id, 42)
-
-
-def test_the_button_of_a_check_in_in_a_private_chat() -> None:
-    update = callback_update(USER, "checkin:42")
-
-    assert parse(update) == Press(USER.user_id, update["callback_query"]["id"], 42)
+@pytest.mark.parametrize(
+    ("text", "code"), [("AB23", "AB23"), (" 5ean ", "5EAN"), ("zz9k\n", "ZZ9K")]
+)
+def test_a_text_of_four_characters_of_the_alphabet_is_a_code(text: str, code: str) -> None:
+    assert parse(message_update(USER, text)) == Code(USER.user_id, USER.user_id, code)
 
 
-@pytest.mark.parametrize("chat_type", ["group", "supergroup"])
-def test_the_button_of_a_check_in_in_a_group_is_ignored(chat_type: str) -> None:
+@pytest.mark.parametrize("text", ["ABCDE", "AB2", "AB 23", "AB2!", "0OI1", "ЯBCD", "ßAB3", "ǅAB3"])
+def test_other_texts_are_not_a_code(text: str) -> None:
+    assert parse(message_update(USER, text)) == Question(USER.user_id, USER.user_id, text.strip())
+
+
+def test_a_code_in_a_group_chat_is_ignored() -> None:
+    update = message_update(USER, "AB23", chat_type="supergroup", chat_id=-100555)
+
+    assert parse(update) is None
+
+
+@pytest.mark.parametrize("chat_type", ["private", "channel", "group", "supergroup"])
+def test_the_old_button_of_a_check_in_is_ignored(chat_type: str) -> None:
     assert parse(callback_update(USER, "checkin:42", chat_type=chat_type)) is None
 
 
@@ -191,7 +195,7 @@ def test_the_rating_and_group_buttons_are_for_private_chats_only() -> None:
 
 
 def test_a_button_without_data_is_ignored() -> None:
-    update = callback_update(USER, "checkin:42")
+    update = callback_update(USER, "rate:42:5")
     del update["callback_query"]["data"]
 
     assert parse(update) is None

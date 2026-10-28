@@ -5,8 +5,8 @@ must import without the slice package (the foundation's tests swap ``app.slices`
 """
 
 from app.adapters.checkin.telegram import TelegramAttendance
-from app.adapters.checkin.texts import CheckinTexts
-from app.core.checkin.ports import CheckinStore
+from app.adapters.checkin.texts import AdminTexts, CheckinTexts
+from app.core.checkin.ports import ANNOUNCER_KEY, CheckinAnnouncer, CheckinStore
 from app.core.checkin.service import Attendance
 from app.core.ports import RateLimiter
 from app.services import Key
@@ -15,5 +15,8 @@ STORE = Key[CheckinStore]("checkin.store")
 ATTENDANCE = Key[Attendance]("checkin.attendance")
 RATE_LIMITER = Key[RateLimiter]("checkin.rate_limiter")
 TEXTS = Key[CheckinTexts]("checkin.texts")
+ADMIN_TEXTS = Key[AdminTexts]("checkin.admin_texts")
+# The post of a check-in in the channel; the bot provides it, this slice only finds it.
+ANNOUNCER = Key[CheckinAnnouncer](ANNOUNCER_KEY)
 # The scenarios for the bot of Telegram; the bot finds them by this very name (``core.bot.ports``).
 TELEGRAM = Key[TelegramAttendance]("checkin.telegram")

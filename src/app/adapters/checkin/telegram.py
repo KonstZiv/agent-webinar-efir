@@ -83,11 +83,15 @@ class ReportAnswer:
 class PressedAnswer:
     status: PressStatus
     lesson_date: date = NO_DATE
+    checkin_id: int = 0
+    group: str | None = None
 
 
 def _pressed(result: Telegram) -> PressedAnswer:
-    lesson_date = result.checkin.lesson_date if result.checkin is not None else NO_DATE
-    return PressedAnswer(_STATUS[result.verdict], lesson_date)
+    checkin = result.checkin
+    if checkin is None:
+        return PressedAnswer(_STATUS[result.verdict])
+    return PressedAnswer(_STATUS[result.verdict], checkin.lesson_date, checkin.id, checkin.group)
 
 
 def _failed(operation: str, error: StorageError) -> None:
@@ -154,9 +158,9 @@ class TelegramAttendance:
             questions=tuple(entry.question for entry in report.entries if entry.question),
         )
 
-    def mark(self, checkin_id: int, tg_user_id: int) -> PressedAnswer:
+    def mark_code(self, code: str, tg_user_id: int) -> PressedAnswer:
         try:
-            return _pressed(self._attendance.mark_telegram(checkin_id, tg_user_id))
+            return _pressed(self._attendance.mark_telegram_code(code, tg_user_id))
         except StorageError as error:
             _failed("mark", error)
             return PressedAnswer("failed")

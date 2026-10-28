@@ -14,32 +14,32 @@ from app.core.entities import Button
 from app.core.event_values import MONTHS
 from app.core.timezone import KYIV
 
-# ``callback_data`` of the buttons: «Я на занятті», the rating, a group to open.
-PRESS_PREFIX = "checkin"
+# ``callback_data`` of the buttons: the rating, a group to open.
 RATE_PREFIX = "rate"
 OPEN_PREFIX = "open"
 
 POST = (
-    "Відмітка присутності — група {group}, заняття {lesson_day_month}. Якщо ви зараз на занятті, "
-    "натисніть кнопку: вікно відкрите {window} хв."
+    "Відмітка присутності на занятті студентів групи {group}. Якщо це не ваша група — "
+    "проігноруйте. Щоб відмітитись, натисніть кнопку і надішліть боту код з екрана тренера. "
+    "Вікно відкрите {window} хв."
 )
-I_AM_HERE = "Я на занятті"
-ON_SITE = "Відмітитись на сайті"
+POST_BUTTON = "Відмітитись"
 
-MARKED = "Відмічено ✔ Подивіться особисті повідомлення від бота."
-ALREADY_MARKED = "Ви вже відмічені ✔"
-NOT_LINKED = (
-    "Telegram ще не підключено до вашої реєстрації. Натисніть «Відмітитись на сайті» під цим "
-    "постом — там потрібна лише адреса пошти."
+# The answers to a code sent to the bot in a private chat.
+MARKED = (
+    "Ви відмічені на занятті групи {group}, {lesson_day_month}. Як вам заняття? Якщо є запитання "
+    "тренеру — просто напишіть його сюди одним повідомленням."
 )
-WINDOW_CLOSED = "Вікно відмітки закрите."
+ALREADY_MARKED = "Ви вже відмічені ✔"
+CODE_INVALID = "Код не підходить, або вікно відмітки вже закрите. Звірте код на екрані тренера."
+NOT_LINKED = (
+    "Ваш Telegram ще не підключено до реєстрації. Якщо ви зареєстровані — натисніть «Отримати в "
+    "Telegram» у листі-запрошенні; якщо ні — зареєструйтеся на {site_host}/course. Потім "
+    "надішліть код ще раз."
+)
 NOT_WRITTEN = "Не вдалося записати. Спробуйте ще раз за хвилину."
 NOT_INSTALLED = "Недоступно."
 
-AFTER_MARK = (
-    "Ви відмічені на занятті {lesson_day_month}. Як вам заняття? Якщо є запитання тренеру — просто "
-    "напишіть його сюди одним повідомленням."
-)
 RATED = "Дякуємо! Ваша оцінка: {rating}."
 QUESTION_ACCEPTED = "Дякуємо — тренер побачить запитання."
 QUESTION_TOO_LONG = "Скоротіть запитання до 500 знаків і надішліть ще раз."
@@ -49,7 +49,7 @@ FORBIDDEN = "Команда недоступна."
 CHOOSE_GROUP = "Оберіть групу для відмітки:"
 USAGE = (
     "Використання: /checkin <група> [хвилин, 1–180] — або /checkin без аргументів і оберіть групу "
-    "кнопкою. Типово: 20 хв, дата заняття — сьогодні."
+    "кнопкою. Типово: 10 хв, дата заняття — сьогодні."
 )
 OPENED = (
     "Чек-ін #{id} відкрито: заняття {lesson_date}, група {group}, код {code}, вікно до "
@@ -112,13 +112,11 @@ def checkin_link(site_url: str, code: str) -> str:
     return f"{site_url}/checkin?code={code}"
 
 
-def post_buttons(site_url: str, checkin_id: int, code: str) -> tuple[tuple[Button, ...], ...]:
-    return (
-        (
-            Button(I_AM_HERE, callback_data=f"{PRESS_PREFIX}:{checkin_id}"),
-            Button(ON_SITE, url=checkin_link(site_url, code)),
-        ),
-    )
+def post_buttons(bot_username: str) -> tuple[tuple[Button, ...], ...]:
+    """The one button of the post: it opens the chat with the bot."""
+    return ((Button(POST_BUTTON, url=f"https://t.me/{bot_username}"),),)
+
+
 
 
 def rating_buttons(checkin_id: int) -> tuple[tuple[Button, ...], ...]:

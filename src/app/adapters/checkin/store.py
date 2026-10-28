@@ -69,16 +69,19 @@ class SqlCheckinStore:
         self,
         code: str,
         lesson_date: date,
-        group: str,
+        group: str | None,
         opened_at: datetime,
         closes_at: datetime,
     ) -> CheckinEntity | OpenInGroup | None:
         taken = select(CheckinRow.id).where(
             CheckinRow.code == code, CheckinRow.closes_at > opened_at
         )
+        same_group = (
+            CheckinRow.group_code.is_(None) if group is None else CheckinRow.group_code == group
+        )
         in_group = (
             select(CheckinRow)
-            .where(CheckinRow.group_code == group, CheckinRow.closes_at > opened_at)
+            .where(same_group, CheckinRow.closes_at > opened_at)
             .order_by(CheckinRow.id.desc())
             .limit(1)
         )

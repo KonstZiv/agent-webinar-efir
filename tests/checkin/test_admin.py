@@ -24,19 +24,21 @@ def test_open_gives_a_code_and_a_window(site: Site) -> None:
 
     body = response.json()
     assert response.status_code == 201
-    assert set(body) == {"id", "code", "lesson_date", "group", "opened_at", "closes_at"}
+    assert set(body) == {"id", "code", "lesson_date", "group", "opened_at", "closes_at", "posted"}
+    assert body["posted"] is None  # no bot in this application
     assert len(body["code"]) == 4 and set(body["code"]) <= set(CODE_ALPHABET)
     assert (body["lesson_date"], body["group"]) == (LESSON, GROUP)
     assert moment(body["closes_at"]) - moment(body["opened_at"]) == timedelta(minutes=20)
     assert response.headers["cache-control"] == "no-store"
 
 
-def test_defaults_are_twenty_minutes_and_no_group(site: Site) -> None:
+def test_defaults_are_ten_minutes_and_no_group(site: Site) -> None:
     response = site.admin_post("/admin/checkins", {"lesson_date": LESSON})
 
     body = response.json()
+    assert response.status_code == 201
     assert body["group"] is None
-    assert moment(body["closes_at"]) - moment(body["opened_at"]) == timedelta(minutes=20)
+    assert moment(body["closes_at"]) - moment(body["opened_at"]) == timedelta(minutes=10)
 
 
 def test_open_without_the_token_is_401(site: Site) -> None:
@@ -77,7 +79,7 @@ def test_the_edges_of_the_window_are_allowed(site: Site, minutes: int) -> None:
 
 
 def test_open_codes_are_unique(site: Site) -> None:
-    codes = {site.open()["code"] for _ in range(30)}
+    codes = {site.open(group=f"grp-{number}")["code"] for number in range(30)}
 
     assert len(codes) == 30
 
@@ -122,7 +124,7 @@ def test_the_list_counts_the_marks_and_puts_the_latest_first(
     site: Site, participant_factory: ParticipantFactory
 ) -> None:
     participant = participant_factory("one@example.com")
-    first, second = site.open(), site.open(lesson_date="2026-11-09")
+    first, second = site.open(), site.open(lesson_date="2026-11-09", group="open-2026-10")
     site.mark(str(first["code"]), participant.email)
 
     response = site.admin_get("/admin/checkins")

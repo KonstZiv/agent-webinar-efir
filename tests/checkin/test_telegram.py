@@ -125,7 +125,7 @@ def test_close_ends_the_open_check_in_of_the_group_and_counts_the_marks(
 ) -> None:
     participant_factory("one@example.com", telegram=USER)
     opened = telegram.open(TODAY, GROUP, 20)
-    telegram.mark(opened.id, USER.user_id)
+    telegram.mark_code(opened.code, USER.user_id)
     site.clock.advance(timedelta(minutes=5))
 
     closed = telegram.close(GROUP)
@@ -156,7 +156,7 @@ def test_the_report_has_counts_ratings_and_questions_and_no_addresses(
     telegram.open(TODAY, "other-group", 20)
     assert site.mark(code, person.email, rating="3", question="From the site").status_code == 200
     checkin_id = site.checkins()[0].id
-    telegram.mark(checkin_id, USER.user_id)
+    telegram.mark_code(code, USER.user_id)
     telegram.rate(checkin_id, USER.user_id, 5)
     telegram.ask(USER.user_id, "From Telegram")
 
@@ -193,8 +193,8 @@ def test_a_mark_is_recorded_once_with_the_source_telegram(
     person = participant_factory("one@example.com", telegram=USER)
     opened = telegram.open(TODAY, GROUP, 20)
 
-    first = telegram.mark(opened.id, USER.user_id)
-    again = telegram.mark(opened.id, USER.user_id)
+    first = telegram.mark_code(opened.code, USER.user_id)
+    again = telegram.mark_code(opened.code, USER.user_id)
 
     assert (first.status, again.status) == ("marked", "already")
     assert first.lesson_date == TODAY
@@ -209,7 +209,7 @@ def test_a_mark_on_the_site_is_not_marked_again_from_telegram(
     code = str(site.open()["code"])
     assert site.mark(code, person.email).status_code == 200
 
-    answer = telegram.mark(site.checkins()[0].id, USER.user_id)
+    answer = telegram.mark_code(code.lower(), USER.user_id)
 
     assert answer.status == "already"
     assert [row.source for row in site.attendance()] == ["site"]
@@ -221,10 +221,11 @@ def test_a_mark_needs_a_linked_telegram_and_an_open_window(
     participant_factory("one@example.com", telegram=USER)
     opened = telegram.open(TODAY, GROUP, 20)
 
-    assert telegram.mark(opened.id, OTHER.user_id).status == "not_linked"
-    assert telegram.mark(opened.id + 1000, USER.user_id).status == "closed"
+    assert telegram.mark_code(opened.code, OTHER.user_id).status == "not_linked"
+    assert telegram.mark_code("ZZZZ", OTHER.user_id).status == "not_linked"  # nothing about codes
+    assert telegram.mark_code("ZZZZ", USER.user_id).status == "closed"
     site.clock.advance(timedelta(minutes=20))
-    assert telegram.mark(opened.id, USER.user_id).status == "closed"
+    assert telegram.mark_code(opened.code, USER.user_id).status == "closed"
     assert site.attendance() == []
 
 
@@ -235,7 +236,7 @@ def test_the_window_is_closed_before_it_opens_too(
     opened = telegram.open(TODAY, GROUP, 20)
     site.clock.advance(timedelta(minutes=-1))
 
-    assert telegram.mark(opened.id, USER.user_id).status == "closed"
+    assert telegram.mark_code(opened.code, USER.user_id).status == "closed"
 
 
 # --- the rating -------------------------------------------------------------------------------
@@ -246,7 +247,7 @@ def test_a_rating_replaces_the_previous_one_until_a_day_after_closing(
 ) -> None:
     participant_factory("one@example.com", telegram=USER)
     opened = telegram.open(TODAY, GROUP, 20)
-    telegram.mark(opened.id, USER.user_id)
+    telegram.mark_code(opened.code, USER.user_id)
 
     assert telegram.rate(opened.id, USER.user_id, 4).status == "rated"
     assert telegram.rate(opened.id, USER.user_id, 2).status == "rated"
@@ -264,7 +265,7 @@ def test_a_closed_early_check_in_takes_ratings_a_day_from_the_closing(
 ) -> None:
     participant_factory("one@example.com", telegram=USER)
     opened = telegram.open(TODAY, GROUP, 20)
-    telegram.mark(opened.id, USER.user_id)
+    telegram.mark_code(opened.code, USER.user_id)
     site.clock.advance(timedelta(minutes=5))
     telegram.close(GROUP)
 
@@ -280,7 +281,7 @@ def test_a_rating_outside_one_to_five_is_not_stored(
 ) -> None:
     participant_factory("one@example.com", telegram=USER)
     opened = telegram.open(TODAY, GROUP, 20)
-    telegram.mark(opened.id, USER.user_id)
+    telegram.mark_code(opened.code, USER.user_id)
 
     assert telegram.rate(opened.id, USER.user_id, rating).status == "not_marked"
     assert [row.rating for row in site.attendance()] == [None]
@@ -306,7 +307,7 @@ def test_questions_are_added_on_new_lines_up_to_the_limit(
 ) -> None:
     participant_factory("one@example.com", telegram=USER)
     opened = telegram.open(TODAY, GROUP, 20)
-    telegram.mark(opened.id, USER.user_id)
+    telegram.mark_code(opened.code, USER.user_id)
 
     assert telegram.ask(USER.user_id, "  First  ").status == "saved"
     assert telegram.ask(USER.user_id, "Second").status == "saved"
@@ -346,7 +347,7 @@ def test_a_question_is_taken_until_a_day_after_the_window_closed(
 ) -> None:
     participant_factory("one@example.com", telegram=USER)
     opened = telegram.open(TODAY, GROUP, 20)
-    telegram.mark(opened.id, USER.user_id)
+    telegram.mark_code(opened.code, USER.user_id)
     site.clock.advance(timedelta(hours=24, minutes=20) - timedelta(seconds=1))
     assert telegram.ask(USER.user_id, "Just in time").status == "saved"
 
@@ -361,7 +362,7 @@ def test_a_blank_question_is_not_stored(
 ) -> None:
     participant_factory("one@example.com", telegram=USER)
     opened = telegram.open(TODAY, GROUP, 20)
-    telegram.mark(opened.id, USER.user_id)
+    telegram.mark_code(opened.code, USER.user_id)
 
     assert telegram.ask(USER.user_id, "  \n ").status == "not_marked"
     assert [row.question for row in site.attendance()] == [None]
@@ -371,9 +372,11 @@ def test_a_blank_question_is_not_stored(
 
 
 def test_a_storage_failure_is_the_status_failed_and_nothing_is_raised(
-    site: Site, telegram: TelegramAttendance
+    site: Site, telegram: TelegramAttendance, participant_factory: ParticipantFactory
 ) -> None:
     from sqlalchemy import text
+
+    participant_factory("one@example.com", telegram=USER)
 
     with site.engine.begin() as connection:
         connection.execute(text("ALTER TABLE checkins RENAME TO checkins_gone"))
@@ -382,7 +385,7 @@ def test_a_storage_failure_is_the_status_failed_and_nothing_is_raised(
             telegram.open(TODAY, GROUP, 20).status,
             telegram.close(None).status,
             telegram.report(None).status,
-            telegram.mark(1, USER.user_id).status,
+            telegram.mark_code("AB23", USER.user_id).status,
             telegram.rate(1, USER.user_id, 3).status,
             telegram.ask(USER.user_id, "Text").status,
             telegram.known_groups(8),
@@ -391,4 +394,4 @@ def test_a_storage_failure_is_the_status_failed_and_nothing_is_raised(
         with site.engine.begin() as connection:
             connection.execute(text("ALTER TABLE checkins_gone RENAME TO checkins"))
 
-    assert results == ["failed"] * 3 + ["failed", "failed", "not_marked", None]
+    assert results == ["failed"] * 6 + [None]

@@ -26,9 +26,9 @@ from app.adapters.bot.keys import DIALOG, WORKERS
 from app.adapters.bot.updates import parse_update
 from app.adapters.web.dependencies import get_container
 from app.core.bot.commands import (
+    Code,
     Command,
     PickGroup,
-    Press,
     Question,
     Rate,
     Recheck,
@@ -57,8 +57,8 @@ def _kind(command: Command) -> str:
             return command.name
         case PickGroup():
             return "pick_group"
-        case Press():
-            return "press"
+        case Code():
+            return "code"
         case Rate():
             return "rate"
         case Question():

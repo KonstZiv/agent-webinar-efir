@@ -1,0 +1,74 @@
+{#-
+  /admin/checkin: the teacher's page of the attendance (docs/copy.md 14.4). A shell without data
+  and without authorization: no code, address or check-in is in this HTML. The script
+  (static/js/checkin-admin.js) takes the admin token from the form, keeps it in the tab's
+  sessionStorage and fills the screens from the admin API. The texts with values arrive as JSON
+  (the script has no texts of its own). Not indexed.
+-#}
+{% extends "base.html" %}
+{% block title %}{{ admin.tag_title }}{% endblock %}
+{% block meta %}{% endblock %}
+{% block scripts %}
+<script id="checkin-admin-config" type="application/json">{{ script_config | tojson }}</script>
+<script src="/static/js/checkin-admin.js{% if asset_version %}?v={{ asset_version }}{% endif %}" defer></script>
+{% endblock %}
+{% block main %}
+<section class="checkin-admin" id="checkin-admin">
+  <p class="checkin-admin__error" id="admin-error" role="alert" hidden>{{ admin.network_error }}</p>
+
+  <form class="checkin-admin__panel" id="admin-login" novalidate>
+    <h1 class="checkin-admin__title">{{ admin.login_title }}</h1>
+    <p class="checkin-admin__error" id="admin-login-error" role="alert" hidden>{{ admin.token_rejected }}</p>
+    <div class="checkin-admin__field">
+      <label class="checkin-admin__label" for="admin-token">{{ admin.token_label }}</label>
+      <input class="checkin-admin__input" id="admin-token" name="token" type="password"
+             autocomplete="off" aria-describedby="admin-token-hint">
+      <p class="checkin-admin__hint" id="admin-token-hint">{{ admin.token_hint }}</p>
+    </div>
+    <button class="checkin-admin__button" type="submit">{{ admin.login_button }}</button>
+  </form>
+
+  <form class="checkin-admin__panel" id="admin-start" novalidate hidden>
+    <h1 class="checkin-admin__title">{{ admin.start_title }}</h1>
+    <p class="checkin-admin__error" id="admin-start-error" role="alert" hidden></p>
+    <div class="checkin-admin__field">
+      <label class="checkin-admin__label" for="admin-group">{{ admin.group_label }}</label>
+      <input class="checkin-admin__input" id="admin-group" name="group" type="text" list="admin-groups"
+             autocomplete="off" autocapitalize="none" spellcheck="false"
+             aria-describedby="admin-group-hint">
+      <datalist id="admin-groups"></datalist>
+      <p class="checkin-admin__hint" id="admin-group-hint">{{ admin.group_hint }}</p>
+    </div>
+    <div class="checkin-admin__field">
+      <label class="checkin-admin__label" for="admin-minutes">{{ admin.minutes_label }}</label>
+      <input class="checkin-admin__input" id="admin-minutes" name="minutes" type="number"
+             inputmode="numeric" value="{{ script_config.default_minutes }}"
+             min="{{ script_config.min_minutes }}" max="{{ script_config.max_minutes }}">
+    </div>
+    <button class="checkin-admin__button" type="submit">{{ admin.start_button }}</button>
+  </form>
+
+  <div class="checkin-admin__panel checkin-admin__screen" id="admin-board" hidden>
+    <p class="checkin-admin__group" id="admin-board-group"></p>
+    <p class="checkin-admin__code" id="admin-board-code"></p>
+    <p class="checkin-admin__where">{{ admin.screen_site }}</p>
+    {%- if channel %}
+    <p class="checkin-admin__where">{{ admin.screen_telegram }}</p>
+    {%- endif %}
+    <p class="checkin-admin__countdown" id="admin-board-countdown"></p>
+    <p class="checkin-admin__counter" id="admin-board-counter"></p>
+    <button class="checkin-admin__button" id="admin-close" type="button">{{ admin.close_button }}</button>
+    <p class="checkin-admin__hint" id="admin-not-posted" hidden>{{ admin.not_posted }}</p>
+  </div>
+
+  <div class="checkin-admin__panel" id="admin-summary" hidden>
+    <h1 class="checkin-admin__title">{{ admin.summary_title }}</h1>
+    <p id="admin-summary-count"></p>
+    <p id="admin-summary-ratings"></p>
+    <button class="checkin-admin__button checkin-admin__button--quiet" id="admin-questions-button" type="button"></button>
+    <ol class="checkin-admin__questions" id="admin-questions" hidden></ol>
+    <p id="admin-no-questions" hidden>{{ admin.no_questions }}</p>
+    <button class="checkin-admin__button" id="admin-new" type="button">{{ admin.new_button }}</button>
+  </div>
+</section>
+{% endblock %}

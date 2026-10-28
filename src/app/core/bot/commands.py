@@ -1,8 +1,7 @@
 """What a person asks the bot, read from a Telegram update (``app.adapters.bot.updates``).
 
 Commands come from private chats; in them the chat id is the user's id, but the core keeps
-both, as Telegram sends them. The one exception is ``Press``, the button under the post of a
-check-in, which may also come from the channel.
+both, as Telegram sends them.
 """
 
 from dataclasses import dataclass
@@ -49,12 +48,12 @@ class PickGroup:
 
 
 @dataclass(frozen=True, slots=True)
-class Press:
-    """«Я на занятті» under the post of a check-in, in the channel or in a private chat."""
+class Code:
+    """A private message that is a check-in code: 4 characters of its alphabet, in upper case."""
 
+    chat_id: int
     user_id: int
-    callback_id: str
-    checkin_id: int
+    code: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,7 +76,7 @@ class Question:
     text: str
 
 
-type AttendanceCommand = TeacherCommand | PickGroup | Press | Rate | Question
+type AttendanceCommand = TeacherCommand | PickGroup | Code | Rate | Question
 type Command = Start | Recheck | AttendanceCommand
 # The classes of ``AttendanceCommand`` for ``isinstance``, which cannot take the alias.
-ATTENDANCE_COMMANDS = (TeacherCommand, PickGroup, Press, Rate, Question)
+ATTENDANCE_COMMANDS = (TeacherCommand, PickGroup, Code, Rate, Question)
