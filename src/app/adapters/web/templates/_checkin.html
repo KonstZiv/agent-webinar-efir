@@ -21,10 +21,13 @@
   <p class="checkin__intro">{{ texts.intro }}</p>
   <form class="checkin__form" method="post" action="{{ checkin.url }}#checkin-result" novalidate
         hx-post="{{ checkin.url }}" hx-target="#checkin" hx-swap="outerHTML"
-        hx-on::before-request="const b = this.querySelector('button'); b.textContent = b.dataset.busyLabel; b.disabled = true">
+        hx-on::before-request="const b = this.querySelector('button'); this.querySelector('[data-network-error]').hidden = true; b.textContent = b.dataset.busyLabel; b.disabled = true"
+        hx-on::send-error="const b = this.querySelector('button'); this.querySelector('[data-network-error]').hidden = false; b.textContent = b.dataset.label; b.disabled = false"
+        hx-on::response-error="const b = this.querySelector('button'); this.querySelector('[data-network-error]').hidden = false; b.textContent = b.dataset.label; b.disabled = false">
     {%- if state and state.problem %}
     <p class="checkin__error" id="checkin-result" role="alert" tabindex="-1">{{ texts.errors[state.problem] }}</p>
     {%- endif %}
+    <p class="checkin__error" role="alert" data-network-error hidden>{{ texts.errors["failed"] }}</p>
     <div class="checkin__field">
       <label class="checkin__label" for="checkin-code">{{ texts.code_label }}</label>
       <input class="checkin__input checkin__input--code" id="checkin-code" name="code" type="text"
@@ -55,7 +58,7 @@
       <label class="checkin__label" for="checkin-question">{{ texts.question_label }}</label>
       <textarea class="checkin__input" id="checkin-question" name="question" rows="4">{{ state.question if state else '' }}</textarea>
     </div>
-    <button class="checkin__button" type="submit" data-busy-label="{{ texts.button_busy }}">{{ texts.button }}</button>
+    <button class="checkin__button" type="submit" data-label="{{ texts.button }}" data-busy-label="{{ texts.button_busy }}">{{ texts.button }}</button>
   </form>
   {%- endif %}
 </div>

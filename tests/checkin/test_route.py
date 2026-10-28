@@ -35,6 +35,20 @@ def test_the_page_without_javascript_has_the_form(site: Site) -> None:
     assert page.find("meta", name="robots").attrs["content"] == "noindex"
 
 
+def test_the_form_has_a_hidden_network_error_and_handlers_for_both_failures(site: Site) -> None:
+    form = parse(site.client.get("/checkin").text).find("form", method="post")
+
+    [alert] = [node for node in form.iter() if "data-network-error" in node.attrs]
+    assert "hidden" in alert.attrs
+    assert alert.attrs["role"] == "alert"
+    assert alert.text() == ERRORS["Помилка мережі або сервера"]
+    for event in ("send-error", "response-error"):
+        handler = form.attrs[f"hx-on::{event}"]
+        assert "hidden = false" in handler
+        assert "disabled = false" in handler
+    assert "hidden = true" in form.attrs["hx-on::before-request"]
+
+
 def test_the_page_has_no_event_markup(site: Site) -> None:
     assert "application/ld+json" not in site.client.get("/checkin").text
 
