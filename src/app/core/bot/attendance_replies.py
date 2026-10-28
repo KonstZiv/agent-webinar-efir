@@ -24,6 +24,7 @@ POST = (
     "Вікно відкрите {window} хв."
 )
 POST_BUTTON = "Відмітитись"
+CHECKIN_START = "checkin"  # the ``start`` parameter of the post's button; link tokens are longer
 
 # The answers to a code sent to the bot in a private chat.
 MARKED = (
@@ -37,6 +38,7 @@ NOT_LINKED = (
     "Telegram» у листі-запрошенні; якщо ні — зареєструйтеся на {site_host}/course. Потім "
     "надішліть код ще раз."
 )
+CODE_HINT = "Надішліть сюди код з екрана тренера — 4 символи."
 NOT_WRITTEN = "Не вдалося записати. Спробуйте ще раз за хвилину."
 NOT_INSTALLED = "Недоступно."
 
@@ -113,8 +115,8 @@ def checkin_link(site_url: str, code: str) -> str:
 
 
 def post_buttons(bot_username: str) -> tuple[tuple[Button, ...], ...]:
-    """The one button of the post: it opens the chat with the bot."""
-    return ((Button(POST_BUTTON, url=f"https://t.me/{bot_username}"),),)
+    """The one button of the post: it opens the chat with the bot and starts ``checkin``."""
+    return ((Button(POST_BUTTON, url=f"https://t.me/{bot_username}?start={CHECKIN_START}"),),)
 
 
 

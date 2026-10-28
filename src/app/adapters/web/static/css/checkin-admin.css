@@ -94,8 +94,20 @@
   font: 700 28px/1.3 var(--font);
 }
 
+.checkin-admin__codeline {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.4em;
+  white-space: nowrap; /* the label and the code stay in one line */
+}
+
+.checkin-admin__code-label {
+  font: 700 24px/1.3 var(--font); /* not larger than the countdown */
+}
+
 .checkin-admin__code {
-  font: 800 clamp(72px, 22vw, 168px) / 1.1 var(--mono);
+  font: 800 clamp(56px, 16vw, 144px) / 1.1 var(--mono);
   letter-spacing: 0.12em;
 }
 

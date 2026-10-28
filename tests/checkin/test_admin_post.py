@@ -69,7 +69,7 @@ def test_open_without_minutes_is_ten_minutes_and_posts_once(
     assert sent.text == post_text(GROUP, 10)
     [[button]] = sent.buttons
     assert button.text == POST_BUTTON
-    assert button.url == f"https://t.me/{BOT_ENV['TELEGRAM_BOT_USERNAME']}"
+    assert button.url == f"https://t.me/{BOT_ENV['TELEGRAM_BOT_USERNAME']}?start=checkin"
     assert button.callback_data is None
     assert body["code"] not in sent.text
 

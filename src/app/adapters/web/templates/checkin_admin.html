@@ -50,7 +50,10 @@
 
   <div class="checkin-admin__panel checkin-admin__screen" id="admin-board" hidden>
     <p class="checkin-admin__group" id="admin-board-group"></p>
-    <p class="checkin-admin__code" id="admin-board-code"></p>
+    <p class="checkin-admin__codeline">
+      <span class="checkin-admin__code-label" id="admin-board-code-label"></span>
+      <span class="checkin-admin__code" id="admin-board-code"></span>
+    </p>
     <p class="checkin-admin__where">{{ admin.screen_site }}</p>
     {%- if channel %}
     <p class="checkin-admin__where">{{ admin.screen_telegram }}</p>

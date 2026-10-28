@@ -61,7 +61,8 @@ def test_checkin_opens_a_check_in_of_the_group_for_today_and_posts_it(site: BotS
     assert labels(channel_post) == POST_BUTTONS
     assert len(channel_post.buttons) == 1  # one row, one button
     [open_bot] = buttons(channel_post)
-    assert open_bot.url == f"https://t.me/{BOT_USERNAME}" and open_bot.callback_data is None
+    assert open_bot.url == f"https://t.me/{BOT_USERNAME}?start=checkin"
+    assert open_bot.callback_data is None
     assert row.code not in channel_post.text  # the code is on the teacher's screen only
     assert reply.chat_id == TEACHER.user_id
     assert reply.text == opened(row)

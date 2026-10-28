@@ -235,6 +235,17 @@ class AttendanceDialog:
                 self._say(command.chat_id, texts.NOT_WRITTEN)
         return marked.status
 
+    def code_hint(self, chat_id: int, linked: bool) -> str:
+        """The answer to ``/start checkin``: ask a linked person for the code, others to link."""
+        if self._attendance() is None:
+            self._say(chat_id, texts.NOT_INSTALLED)
+            return "unavailable"
+        if linked:
+            self._say(chat_id, texts.CODE_HINT)
+            return "code_hint"
+        self._say(chat_id, texts.NOT_LINKED.format(site_host=self._site_host))
+        return "not_linked"
+
     def _rate(self, command: Rate) -> str:
         service = self._attendance()
         if service is None:

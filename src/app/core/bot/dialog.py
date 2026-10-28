@@ -25,6 +25,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from app.core.bot.attendance import AttendanceDialog
+from app.core.bot.attendance_replies import CHECKIN_START
 from app.core.bot.commands import ATTENDANCE_COMMANDS, Command, Recheck
 from app.core.bot.ports import MessengerRateLimited
 from app.core.bot.replies import Answer, Replies
@@ -109,6 +110,9 @@ class BotDialog:
             return Outcome(Linking.NONE, self._check(command.chat_id, command.account, True))
         if command.payload is None:
             return Outcome(Linking.NONE, self._check(command.chat_id, command.account))
+        if command.payload == CHECKIN_START:
+            linked = self._participants.by_telegram(command.account.user_id) is not None
+            return Outcome(Linking.NONE, self._attendance.code_hint(command.chat_id, linked))
         return self._start(command.chat_id, command.account, command.payload)
 
     def _start(self, chat_id: int, account: TelegramAccount, payload: str) -> Outcome:

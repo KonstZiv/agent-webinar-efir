@@ -256,7 +256,9 @@
     finishing = false;
     current = { id: checkin.id, closesAt: Date.parse(checkin.closes_at) };
     $("admin-board-group").textContent = fill(texts.group, { group: checkin.group || NO_VALUE });
-    $("admin-board-code").textContent = fill(texts.code, { code: checkin.code });
+    // The text "... {code}" is split at the placeholder: the words are small, the code is large.
+    $("admin-board-code-label").textContent = texts.code.split("{code}")[0].trim();
+    $("admin-board-code").textContent = checkin.code;
     $("admin-not-posted").hidden = posted !== false;
     renderCounter(checkin.attended || 0);
     show("board");

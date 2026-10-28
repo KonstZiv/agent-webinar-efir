@@ -105,6 +105,11 @@ def scene_not_written(site: BotSite, factory: ParticipantFactory) -> None:
         press(site, "AB23")
 
 
+def scene_code_hint(site: BotSite, factory: ParticipantFactory) -> None:
+    factory("one@example.com", telegram=USER)
+    site.start(USER, "checkin")
+
+
 def scene_rated(site: BotSite, factory: ParticipantFactory) -> None:
     checkin_id = marked(site, factory)
     site.post(callback_update(USER, f"rate:{checkin_id}:4"))
@@ -178,6 +183,7 @@ SAID: dict[str, Scene] = {
     "Код не підходить": scene_code_invalid,
     "Telegram не прив'язано": scene_not_linked,
     "Не вдалося записати": scene_not_written,
+    "Підказка коду (після кнопки «Відмітитись» під постом)": scene_code_hint,
     "Оцінку прийнято": scene_rated,
     "Запитання прийнято": scene_question,
     "Запитання довше за 500 знаків": scene_question_too_long,
@@ -283,7 +289,7 @@ def test_the_post_of_the_channel_is_the_text_of_the_section(
     assert channel_post.text == post(OTHER_GROUP, 45)
     assert labels(channel_post) == POST_BUTTONS == ("Відмітитись",)
     [[button]] = channel_post.buttons
-    assert button.url == f"https://t.me/{BOT_USERNAME}"
+    assert button.url == f"https://t.me/{BOT_USERNAME}?start=checkin"
     assert button.callback_data is None
 
 
@@ -304,6 +310,15 @@ def test_without_the_slice_of_the_attendance_a_code_says_so() -> None:
     dialog_without_the_slice(messenger).handle(Code(USER.user_id, USER.user_id, "AB23"))
 
     assert [message.text for message in messenger.sent] == [ROWS[NO_SLICE][0]] == [NOT_INSTALLED]
+
+
+@pytest.mark.parametrize("linked", [True, False])
+def test_without_the_slice_of_the_attendance_the_hint_says_so(linked: bool) -> None:
+    messenger = FakeMessenger()
+
+    dialog_without_the_slice(messenger).code_hint(USER.user_id, linked)
+
+    assert [message.text for message in messenger.sent] == [NOT_INSTALLED]
 
 
 def test_without_the_slice_of_the_attendance_the_commands_are_unavailable() -> None:

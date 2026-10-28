@@ -110,6 +110,14 @@ def test_the_screen_and_the_summary_have_the_texts_of_14_4(bot_site: Site) -> No
     assert node.find("p", id="admin-error").text() == copy_network_error()
 
 
+def test_the_code_is_an_element_of_its_own_next_to_the_label(bot_site: Site) -> None:
+    board = parse(page(bot_site)).find("div", id="admin-board")
+
+    line = board.find("p", class_="checkin-admin__codeline")
+    assert line.find("span", id="admin-board-code-label") is not None
+    assert line.find("span", id="admin-board-code", class_="checkin-admin__code") is not None
+
+
 def copy_network_error() -> str:
     lines = [line for line in SECTION.splitlines() if line.startswith("**Збій мережі")]
     [line] = lines
