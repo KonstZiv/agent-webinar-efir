@@ -40,6 +40,8 @@ EXPORT_COLUMNS = [
     "utm_medium",
     "utm_campaign",
     "utm_content",
+    "telegram_user_id",
+    "telegram_username",
 ]
 STATS_KEYS = ["total", "last_24h", "failed_emails", "telegram_linked", "channel_members"]
 HOLD_LIMIT = 10.0  # seconds a held read waits at most, so a broken test cannot hang
