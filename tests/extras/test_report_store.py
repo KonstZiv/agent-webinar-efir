@@ -55,7 +55,7 @@ def test_export_rows(migrated_engine: Engine, participant_factory: ParticipantFa
         "earlier@example.com",
         origin=None,
         registered_at=SINCE,
-        telegram=TelegramAccount(7201),
+        telegram=TelegramAccount(7201, "early_bird"),
         channel_member=True,
         level="senior",
     )
@@ -78,7 +78,10 @@ def test_export_rows(migrated_engine: Engine, participant_factory: ParticipantFa
         utm_medium=None,
         utm_campaign=None,
         utm_content=None,
+        telegram_user_id=7201,
+        telegram_username="early_bird",
     )
+    assert (rows[1].telegram_user_id, rows[1].telegram_username) == (None, None)
     assert (rows[1].origin, rows[1].telegram_linked, rows[1].channel_member) == ("v2", False, None)
     assert (rows[1].utm_source, rows[1].utm_content) == ("ads", "banner")
 

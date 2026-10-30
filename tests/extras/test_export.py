@@ -4,7 +4,8 @@ UTF-8 without BOM, commas, a header row, ``Content-Disposition: attachment;
 filename=participants.csv``. Columns in this order: ``email``, ``registered_at`` (UTC,
 ``2026-10-20T16:05:00Z``), ``origin``, ``telegram_linked`` (``0``/``1``), ``channel_member``
 (``0``/``1``/empty), ``level``, ``utm_source``, ``utm_medium``, ``utm_campaign``,
-``utm_content``. Rows by ``registered_at``, the earliest first; an empty value is an empty cell.
+``utm_content``, ``telegram_user_id``, ``telegram_username``. Rows by ``registered_at``, the
+earliest first; an empty value is an empty cell.
 A value starting with ``=``, ``+``, ``-``, ``@``, a tab or a carriage return gets ``'`` in front.
 No unsubscribe links, no ad click or Google Analytics identifiers. The file is parsed in memory
 only: never printed, never stored.
@@ -144,6 +145,8 @@ def test_every_column_of_a_full_row(site: Site, participant_factory: Participant
         "social",
         "webinar",
         "post-1",
+        "5001",
+        "full",
     ]
 
 
@@ -158,7 +161,7 @@ def test_a_participant_of_v1_has_empty_cells(
     assert row["telegram_linked"] == "0"
     assert row["referrals"] == "0"
     empty = [name for name in EXPORT_COLUMNS[4:] if name != "referrals"]
-    assert [row[name] for name in empty] == [""] * 9
+    assert [row[name] for name in empty] == [""] * 11
 
 
 @pytest.mark.parametrize(
@@ -194,6 +197,40 @@ def test_commas_and_quotes_survive(site: Site, participant_factory: ParticipantF
     assert row["utm_campaign"] == 'spring, "sale"\nline two'
 
 
+def test_telegram_identity_cells(site: Site, participant_factory: ParticipantFactory) -> None:
+    participant_factory("named@example.com", telegram=TelegramAccount(9_000_000_001, "named_user"))
+    participant_factory("nameless@example.com", telegram=TelegramAccount(9_000_000_002))
+    participant_factory("unlinked@example.com")
+
+    rows = by_email(export(site))
+
+    assert rows["named@example.com"]["telegram_user_id"] == "9000000001"
+    assert rows["named@example.com"]["telegram_username"] == "named_user"
+    assert rows["nameless@example.com"]["telegram_user_id"] == "9000000002"
+    assert rows["nameless@example.com"]["telegram_username"] == ""
+    assert rows["unlinked@example.com"]["telegram_user_id"] == ""
+    assert rows["unlinked@example.com"]["telegram_username"] == ""
+
+
+def test_cells_of_telegram_identity_are_protected() -> None:
+    row = ExportRow(
+        email="cells@example.com",
+        registered_at=datetime(2026, 10, 20, 19, 5, 30, tzinfo=KYIV_SUMMER),
+        origin=None,
+        telegram_linked=True,
+        channel_member=None,
+        level=None,
+        utm_source=None,
+        utm_medium=None,
+        utm_campaign=None,
+        utm_content=None,
+        telegram_user_id=42,
+        telegram_username="=cmd",
+    )
+
+    assert cells(row)[-2:] == ("42", "'=cmd")
+
+
 # --- formulas -----------------------------------------------------------------------------
 
 DANGEROUS = ["=HYPERLINK(1)", "+1+2", "-3", "@SUM(A1)", "\tTAB", "\rCR"]
@@ -215,7 +252,7 @@ def test_a_formula_from_the_address_bar_is_defused(
 
     row = by_email(export(site))["formula@example.com"]
 
-    assert [row[name] for name in EXPORT_COLUMNS[-4:]] == [f"'{value}"] * 4
+    assert [row[name] for name in EXPORT_COLUMNS[-6:-2]] == [f"'{value}"] * 4
 
 
 def test_a_formula_in_the_local_part_of_an_address_is_defused(
@@ -273,6 +310,8 @@ def test_cells_of_a_row() -> None:
         "",
         "",
         "'@me",
+        "",
+        "",
         "",
         "",
         "",

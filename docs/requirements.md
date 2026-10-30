@@ -303,7 +303,7 @@
 - **Повторне надсилання** `POST /admin/emails/retry` (зріз «реєстрація і лист») — JSON `{"attempted", "sent", "failed"}`, як у v1.
 - **Експорт** `GET /admin/export.csv`:
   - UTF-8 без BOM, роздільник — кома, рядок заголовків, `Content-Disposition: attachment; filename=participants.csv`;
-  - стовпці в такому порядку: `email`, `registered_at`, `origin`, `telegram_linked` (`0`/`1`), `channel_member` (`0`/`1`/порожньо), `level`, `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`;
+  - стовпці в такому порядку: `email`, `registered_at`, `origin`, `telegram_linked` (`0`/`1`), `channel_member` (`0`/`1`/порожньо), `level`, `ref_code`, `referrals`, `groups`, `attended`, `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `telegram_user_id` (число без форматування), `telegram_username` (без `@`; не прив'язано — обидві клітинки порожні);
   - `registered_at` — UTC у вигляді `2026-10-21T16:05:00Z`; рядки — за `registered_at` від найранішого; порожнє значення бази — порожня клітинка;
   - **захист від формул:** значення, що починається з `=`, `+`, `-`, `@`, табуляції чи повернення каретки, отримує на початку `'`. Причина: `utm_*` і локальну частину адреси задає відвідувач, а файл відкривають у табличному редакторі;
   - посилань відписки й ідентифікаторів рекламних кліків та Google Analytics в експорті немає: перше — дозвіл видалити людину, друге в таблиці нічого не каже. Файл містить персональні дані: зберігається лише в організатора, не потрапляє в репозиторій і на екран ефіру.
@@ -373,7 +373,7 @@
 
 `posted`: `true` — пост у каналі опубліковано (`bot.checkin_post`), `false` — Telegram відмовив (чек-ін діє), `null` — зріз «бот» не підключений. Невідомий `id` — 404; помилки валідації — 422; збій бази — 503 `{"status":"unavailable"}`. Журнали — лише кількості.
 
-**Експорт.** `/admin/export.csv` доповнюється колонками `ref_code`, `referrals`, `groups`, `attended` (розділ 8).
+**Експорт.** `/admin/export.csv` доповнюється колонками `ref_code`, `referrals`, `groups`, `attended` (розділ 8). Далі в кінці, після `utm_content`, додано колонки `telegram_user_id`, `telegram_username`.
 
 **Дані.** Три таблиці (`participant_groups`, `checkins`, `attendance`), каскадне видалення з учасником — відписка видаляє відмітки і членство в групах.
 

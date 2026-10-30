@@ -125,6 +125,8 @@ class SqlReportStore:
             referrals.label("referrals"),
             groups.label("groups"),
             attended.label("attended"),
+            Participant.tg_user_id.label("telegram_user_id"),
+            Participant.tg_username.label("telegram_username"),
         ).order_by(Participant.registered_at, Participant.id)
         with transaction(self._engine, "export participants") as session:
             return [

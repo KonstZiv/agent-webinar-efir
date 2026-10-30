@@ -25,6 +25,8 @@ COLUMNS = (
     "utm_medium",
     "utm_campaign",
     "utm_content",
+    "telegram_user_id",
+    "telegram_username",
 )
 FORMULA_STARTS = ("=", "+", "-", "@", "\t", "\r")
 
@@ -69,5 +71,7 @@ def cells(row: ExportRow) -> tuple[str, ...]:
         row.utm_medium,
         row.utm_campaign,
         row.utm_content,
+        None if row.telegram_user_id is None else str(row.telegram_user_id),
+        row.telegram_username,
     )
     return tuple(protect(value or "") for value in values)

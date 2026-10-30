@@ -46,6 +46,8 @@ class ExportRow:
     referrals: int = 0  # participants whose ``referred_by`` is this one
     groups: tuple[str, ...] = ()  # codes of the course groups, sorted
     attended: tuple[date, ...] = ()  # dates of the lessons with a mark, sorted, each once
+    telegram_user_id: int | None = None  # ``None``: not linked
+    telegram_username: str | None = None  # without ``@``; ``None``: not linked or no username
 
 
 class CountSource(Protocol):
